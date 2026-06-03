@@ -427,6 +427,7 @@ tbody tr:hover td{background:var(--surface2)}
         <div class="page-actions no-print filters">
           <input class="search-input" placeholder="Search name, SKU, color…" id="shirt-q" oninput="renderShirts()">
           <button class="btn btn-pink btn-sm" onclick="openModal('shirt')">+ Add Shirt Style</button>
+          <button class="btn btn-sm" id="seed-btn" onclick="seedShirts()" style="background:var(--teal);color:#fff;border-color:var(--teal)">⬇ Import 27 Colors</button>
         </div>
       </div>
       <div class="card" style="padding:0"><div class="table-wrap"><table>
@@ -1227,6 +1228,30 @@ async function saveShipShirts(){
   }catch(e){toast(e.message,'err');}
 }
 
+
+async function seedShirts(){
+  const colors = ["White", "Black", "Dark Heather Grey", "Ice Blue", "Kelly", "Midnight Navy", "Banana Cream", "Cardinal", "Charcoal", "Mint", "Black Forest", "Heather White", "Indigo", "Premium Heather", "Vintage Navy", "Vintage Royal", "Vintage Red", "Vintage Black", "Royal", "Macchiato", "Navy", "Bone", "Heather Navy", "Military Green", "Military", "Vintage Purple", "Forest Green"];
+  const btn = document.getElementById('seed-btn');
+  btn.textContent = 'Adding...'; btn.disabled = true;
+  let added = 0;
+  for(const color of colors){
+    try{
+      // Check if already exists
+      const existing = await db.collection('shirts').where('color','==',color).limit(1).get();
+      if(existing.empty){
+        await db.collection('shirts').add({
+          name: color, sku: '', color: color, notes: '',
+          xs:0, s:0, m:0, l:0, xl:0, xxl:0, xxxl:0,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        added++;
+      }
+    }catch(e){ console.error(color, e); }
+  }
+  toast(`Added ${added} shirt colors! (${colors.length - added} already existed)`, 'ok');
+  btn.textContent = '✅ Done!'; btn.disabled = true;
+  await loadShirts();
+}
 // ═══════ MODALS ═══════
 function openModal(name){
   if(name==='order'){populateShipDrop();sv('mo-cust','');document.getElementById('mo-hint').textContent='';}

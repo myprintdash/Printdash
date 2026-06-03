@@ -306,6 +306,7 @@ tbody tr:hover td{background:var(--surface2)}
       <button onclick="nav('orders')" id="nav-orders">Production</button>
       <button onclick="nav('inventory')" id="nav-inventory">Inventory</button>
       <button onclick="nav('reports')" id="nav-reports">Reports</button>
+      <button onclick="nav('shirts')" id="nav-shirts">Shirts</button>
       <button onclick="nav('users')" id="nav-users" style="display:none">Users</button>
       <button onclick="nav('log')" id="nav-log" style="display:none">Activity Log</button>
     </nav>
@@ -418,7 +419,68 @@ tbody tr:hover td{background:var(--surface2)}
       <div class="card"><div class="card-body" id="log-list"></div></div>
     </div>
 
+
+    <!-- SHIRTS -->
+    <div id="page-shirts" class="page">
+      <div class="page-header">
+        <div class="page-title">Shirt Catalog <small>Master list of all shirt styles &amp; sizes</small></div>
+        <div class="page-actions no-print filters">
+          <input class="search-input" placeholder="Search name, SKU, color…" id="shirt-q" oninput="renderShirts()">
+          <button class="btn btn-pink btn-sm" onclick="openModal('shirt')">+ Add Shirt Style</button>
+        </div>
+      </div>
+      <div class="card" style="padding:0"><div class="table-wrap"><table>
+        <thead><tr><th>Shirt Name</th><th>SKU</th><th>Color</th><th>XS</th><th>S</th><th>M</th><th>L</th><th>XL</th><th>2XL</th><th>3XL</th><th>Total</th><th>Notes</th><th class="no-print"></th></tr></thead>
+        <tbody id="shirt-tbody"></tbody>
+      </table></div></div>
+    </div>
   </main>
+</div>
+
+
+<!-- MODAL: ADD/EDIT SHIRT -->
+<div class="overlay" id="modal-shirt">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Shirt Style</div><button class="btn btn-ghost btn-sm" onclick="closeModal('shirt')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="sh-id">
+      <div class="form-row">
+        <div class="fgrp"><label>Shirt Name *</label><input type="text" id="sh-name" placeholder="e.g. Gildan Softstyle Tee"></div>
+        <div class="fgrp"><label>SKU</label><input type="text" id="sh-sku" placeholder="e.g. GLD-64000"></div>
+      </div>
+      <div class="form-row">
+        <div class="fgrp"><label>Color</label><input type="text" id="sh-color" placeholder="e.g. Black, White, Navy"></div>
+        <div class="fgrp"><label>Notes</label><input type="text" id="sh-notes" placeholder="Any notes…"></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:1rem;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:10px">Quantity per Size (Spare Shirts)</div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px">
+          <div class="fgrp"><label>XS</label><input type="number" id="sh-xs" min="0" value="0"></div>
+          <div class="fgrp"><label>S</label><input type="number" id="sh-s" min="0" value="0"></div>
+          <div class="fgrp"><label>M</label><input type="number" id="sh-m" min="0" value="0"></div>
+          <div class="fgrp"><label>L</label><input type="number" id="sh-l" min="0" value="0"></div>
+          <div class="fgrp"><label>XL</label><input type="number" id="sh-xl" min="0" value="0"></div>
+          <div class="fgrp"><label>2XL</label><input type="number" id="sh-2xl" min="0" value="0"></div>
+          <div class="fgrp"><label>3XL</label><input type="number" id="sh-3xl" min="0" value="0"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('shirt')">Cancel</button><button class="btn btn-pink" onclick="saveShirt()">Save Shirt</button></div>
+  </div>
+</div>
+
+<!-- MODAL: SHIPMENT SHIRTS BREAKDOWN -->
+<div class="overlay" id="modal-ship-shirts">
+  <div class="modal" style="width:min(700px,100%)">
+    <div class="modal-header"><div class="modal-title" id="ss-title">Shirts in Shipment</div><button class="btn btn-ghost btn-sm" onclick="closeModal('ship-shirts')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="ss-shipid">
+      <div style="margin-bottom:1rem;font-size:13px;color:var(--ink3)">Record each shirt style and size breakdown for this shipment.</div>
+      <div id="ss-rows"></div>
+      <button class="btn btn-sm" style="margin-top:10px" onclick="addShipShirtRow()">+ Add Row</button>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('ship-shirts')">Cancel</button><button class="btn btn-pink" onclick="saveShipShirts()">Save Breakdown</button></div>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -714,7 +776,7 @@ function nav(page){
   document.querySelectorAll('.topbar-nav button').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   const nb=document.getElementById('nav-'+page);if(nb)nb.classList.add('active');
-  const loaders={dashboard:loadDashboard,shipments:loadShipments,orders:loadOrders,inventory:loadInventory,reports:loadReports,users:loadUsers,log:loadLog};
+  const loaders={dashboard:loadDashboard,shipments:loadShipments,orders:loadOrders,inventory:loadInventory,reports:loadReports,users:loadUsers,log:loadLog,shirts:loadShirts};
   if(loaders[page])loaders[page]();
 }
 
@@ -772,7 +834,7 @@ function renderShipments(){
       <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink3);font-size:12px">${s.design||'—'}</td>
       <td>${badge(shipSt(s))}</td>
       <td class="no-print" style="white-space:nowrap">
-        <button class="btn btn-sm btn-ghost" onclick="editShipment('${s.id}')">Edit</button>
+        <button class="btn btn-sm btn-ghost" onclick="openShipShirts('${s.id}')">👕 Shirts</button> <button class="btn btn-sm btn-ghost" onclick="editShipment('${s.id}')">Edit</button>
         ${isAdmin?`<button class="btn btn-sm btn-danger" onclick="deleteShipment('${s.id}')">Del</button>`:''}
       </td></tr>`;
   }).join('')||`<tr class="empty-row"><td colspan="9">No shipments found</td></tr>`;
@@ -972,6 +1034,197 @@ async function loadLog(){
 
 async function logAct(action){
   try{await db.collection('activity_log').add({userName:currentProfile?.name||'?',action,createdAt:firebase.firestore.FieldValue.serverTimestamp()});}catch{}
+}
+
+
+// ═══════ SHIRTS CATALOG ═══════
+let allShirts = [];
+let allShipShirts = [];
+
+async function loadShirts(){
+  const snap = await db.collection('shirts').orderBy('createdAt','desc').get();
+  allShirts = snap.docs.map(d=>({id:d.id,...d.data()}));
+  renderShirts();
+}
+
+function renderShirts(){
+  const q=(document.getElementById('shirt-q')||{value:''}).value.toLowerCase();
+  const tbody=document.getElementById('shirt-tbody');if(!tbody)return;
+  const isAdmin=(currentProfile?.role||'staff')==='admin';
+  const list=allShirts.filter(s=>
+    (s.name||'').toLowerCase().includes(q)||
+    (s.sku||'').toLowerCase().includes(q)||
+    (s.color||'').toLowerCase().includes(q)
+  );
+  if(!list.length){tbody.innerHTML='<tr class="empty-row"><td colspan="13">No shirts found</td></tr>';return;}
+  tbody.innerHTML=list.map(s=>{
+    const total=(s.xs||0)+(s.s||0)+(s.m||0)+(s.l||0)+(s.xl||0)+(s.xxl||0)+(s.xxxl||0);
+    return`<tr>
+      <td><strong>${s.name||'—'}</strong></td>
+      <td class="mono">${s.sku||'—'}</td>
+      <td>${s.color||'—'}</td>
+      <td>${s.xs||0}</td><td>${s.s||0}</td><td>${s.m||0}</td><td>${s.l||0}</td>
+      <td>${s.xl||0}</td><td>${s.xxl||0}</td><td>${s.xxxl||0}</td>
+      <td><strong>${total}</strong></td>
+      <td style="font-size:12px;color:var(--ink3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.notes||'—'}</td>
+      <td class="no-print" style="white-space:nowrap">
+        <button class="btn btn-sm btn-ghost" onclick="editShirt('${s.id}')">Edit</button>
+        ${isAdmin?`<button class="btn btn-sm btn-danger" onclick="deleteShirt('${s.id}')">Del</button>`:''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openAddShirt(){
+  sv('sh-id','');sv('sh-name','');sv('sh-sku','');sv('sh-color','');sv('sh-notes','');
+  ['sh-xs','sh-s','sh-m','sh-l','sh-xl','sh-2xl','sh-3xl'].forEach(id=>sv(id,'0'));
+  openModal('shirt');
+}
+
+function editShirt(id){
+  const s=allShirts.find(x=>x.id===id);if(!s)return;
+  sv('sh-id',id);sv('sh-name',s.name||'');sv('sh-sku',s.sku||'');
+  sv('sh-color',s.color||'');sv('sh-notes',s.notes||'');
+  sv('sh-xs',s.xs||0);sv('sh-s',s.s||0);sv('sh-m',s.m||0);sv('sh-l',s.l||0);
+  sv('sh-xl',s.xl||0);sv('sh-2xl',s.xxl||0);sv('sh-3xl',s.xxxl||0);
+  openModal('shirt');
+}
+
+async function saveShirt(){
+  const id=v('sh-id');
+  const name=v('sh-name');
+  if(!name){toast('Shirt name is required.','err');return;}
+  const data={
+    name,sku:v('sh-sku'),color:v('sh-color'),notes:v('sh-notes'),
+    xs:parseInt(v('sh-xs'))||0,s:parseInt(v('sh-s'))||0,m:parseInt(v('sh-m'))||0,
+    l:parseInt(v('sh-l'))||0,xl:parseInt(v('sh-xl'))||0,
+    xxl:parseInt(v('sh-2xl'))||0,xxxl:parseInt(v('sh-3xl'))||0,
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  };
+  try{
+    if(id){
+      await db.collection('shirts').doc(id).update(data);
+      toast('Shirt updated!','ok');
+    } else {
+      data.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection('shirts').add(data);
+      toast('Shirt added!','ok');
+    }
+    await logAct(`${id?'Updated':'Added'} shirt: ${name}`);
+    closeModal('shirt');
+    await loadShirts();
+  }catch(e){toast(e.message,'err');}
+}
+
+async function deleteShirt(id){
+  const s=allShirts.find(x=>x.id===id);
+  if(!confirm(`Delete "${s?.name}"?`))return;
+  try{
+    await db.collection('shirts').doc(id).delete();
+    await logAct('Deleted shirt: '+s?.name);
+    toast('Deleted.','ok');
+    await loadShirts();
+  }catch(e){toast(e.message,'err');}
+}
+
+// ═══════ SHIPMENT SHIRT BREAKDOWN ═══════
+async function openShipShirts(shipId){
+  const ship=allShipments.find(x=>x.id===shipId);
+  if(!ship)return;
+  sv('ss-shipid',shipId);
+  document.getElementById('ss-title').textContent=`Shirt Breakdown — ${ship.ref} (${ship.customer})`;
+  // Load existing breakdown
+  const snap=await db.collection('shipment_shirts').where('shipmentId','==',shipId).get();
+  const existing=snap.docs.map(d=>({id:d.id,...d.data()}));
+  renderShipShirtRows(existing);
+  openModal('ship-shirts');
+}
+
+function renderShipShirtRows(rows){
+  const container=document.getElementById('ss-rows');
+  if(!rows||!rows.length) rows=[{shirtName:'',sku:'',color:'',xs:0,s:0,m:0,l:0,xl:0,xxl:0,xxxl:0,notes:''}];
+  container.innerHTML=rows.map((r,i)=>`
+    <div class="ss-row" style="background:var(--surface2);border-radius:var(--radius);padding:10px;margin-bottom:10px" data-idx="${i}">
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+        <div><div class="field-lbl">Shirt Name</div><input type="text" class="ss-name" value="${r.shirtName||''}" placeholder="e.g. Gildan Tee" style="width:100%"></div>
+        <div><div class="field-lbl">SKU</div><input type="text" class="ss-sku" value="${r.sku||''}" placeholder="SKU" style="width:100%"></div>
+        <div><div class="field-lbl">Color</div><input type="text" class="ss-color" value="${r.color||''}" placeholder="Color" style="width:100%"></div>
+        <div style="display:flex;align-items:flex-end"><button class="btn btn-sm btn-danger" onclick="removeShipShirtRow(this)">Remove</button></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px">
+        <div><div class="field-lbl">XS</div><input type="number" class="ss-xs" value="${r.xs||0}" min="0" style="width:100%"></div>
+        <div><div class="field-lbl">S</div><input type="number" class="ss-s" value="${r.s||0}" min="0" style="width:100%"></div>
+        <div><div class="field-lbl">M</div><input type="number" class="ss-m" value="${r.m||0}" min="0" style="width:100%"></div>
+        <div><div class="field-lbl">L</div><input type="number" class="ss-l" value="${r.l||0}" min="0" style="width:100%"></div>
+        <div><div class="field-lbl">XL</div><input type="number" class="ss-xl" value="${r.xl||0}" min="0" style="width:100%"></div>
+        <div><div class="field-lbl">2XL</div><input type="number" class="ss-xxl" value="${r.xxl||0}" min="0" style="width:100%"></div>
+        <div><div class="field-lbl">3XL</div><input type="number" class="ss-xxxl" value="${r.xxxl||0}" min="0" style="width:100%"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function addShipShirtRow(){
+  const container=document.getElementById('ss-rows');
+  const newRow=document.createElement('div');
+  newRow.className='ss-row';
+  newRow.style.cssText='background:var(--surface2);border-radius:var(--radius);padding:10px;margin-bottom:10px';
+  newRow.innerHTML=`
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+      <div><div class="field-lbl">Shirt Name</div><input type="text" class="ss-name" placeholder="e.g. Gildan Tee" style="width:100%"></div>
+      <div><div class="field-lbl">SKU</div><input type="text" class="ss-sku" placeholder="SKU" style="width:100%"></div>
+      <div><div class="field-lbl">Color</div><input type="text" class="ss-color" placeholder="Color" style="width:100%"></div>
+      <div style="display:flex;align-items:flex-end"><button class="btn btn-sm btn-danger" onclick="removeShipShirtRow(this)">Remove</button></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px">
+      <div><div class="field-lbl">XS</div><input type="number" class="ss-xs" value="0" min="0" style="width:100%"></div>
+      <div><div class="field-lbl">S</div><input type="number" class="ss-s" value="0" min="0" style="width:100%"></div>
+      <div><div class="field-lbl">M</div><input type="number" class="ss-m" value="0" min="0" style="width:100%"></div>
+      <div><div class="field-lbl">L</div><input type="number" class="ss-l" value="0" min="0" style="width:100%"></div>
+      <div><div class="field-lbl">XL</div><input type="number" class="ss-xl" value="0" min="0" style="width:100%"></div>
+      <div><div class="field-lbl">2XL</div><input type="number" class="ss-xxl" value="0" min="0" style="width:100%"></div>
+      <div><div class="field-lbl">3XL</div><input type="number" class="ss-xxxl" value="0" min="0" style="width:100%"></div>
+    </div>`;
+  container.appendChild(newRow);
+}
+
+function removeShipShirtRow(btn){
+  const rows=document.querySelectorAll('.ss-row');
+  if(rows.length<=1){toast('At least one row required.','err');return;}
+  btn.closest('.ss-row').remove();
+}
+
+async function saveShipShirts(){
+  const shipId=v('ss-shipid');
+  const rows=document.querySelectorAll('.ss-row');
+  const data=[];
+  rows.forEach(row=>{
+    const name=row.querySelector('.ss-name').value.trim();
+    if(!name)return;
+    data.push({
+      shipmentId:shipId,
+      shirtName:name,
+      sku:row.querySelector('.ss-sku').value.trim(),
+      color:row.querySelector('.ss-color').value.trim(),
+      xs:parseInt(row.querySelector('.ss-xs').value)||0,
+      s:parseInt(row.querySelector('.ss-s').value)||0,
+      m:parseInt(row.querySelector('.ss-m').value)||0,
+      l:parseInt(row.querySelector('.ss-l').value)||0,
+      xl:parseInt(row.querySelector('.ss-xl').value)||0,
+      xxl:parseInt(row.querySelector('.ss-xxl').value)||0,
+      xxxl:parseInt(row.querySelector('.ss-xxxl').value)||0,
+    });
+  });
+  try{
+    // Delete old records for this shipment
+    const old=await db.collection('shipment_shirts').where('shipmentId','==',shipId).get();
+    await Promise.all(old.docs.map(d=>d.ref.delete()));
+    // Add new records
+    await Promise.all(data.map(d=>db.collection('shipment_shirts').add({...d,createdAt:firebase.firestore.FieldValue.serverTimestamp()})));
+    await logAct(`Updated shirt breakdown for shipment ${shipId.slice(0,8)}`);
+    toast('Shirt breakdown saved!','ok');
+    closeModal('ship-shirts');
+  }catch(e){toast(e.message,'err');}
 }
 
 // ═══════ MODALS ═══════

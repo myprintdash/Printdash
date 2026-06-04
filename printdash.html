@@ -1192,8 +1192,6 @@ async function updateShirtSize(id, field, newVal, row){
   }catch(e){ toast('Save failed: '+e.message,'err'); }
 }
 
-}
-
 function openAddShirt(){
   sv('sh-id','');sv('sh-name','Imperial');sv('sh-sku','');sv('sh-color','');sv('sh-notes','');
   ['sh-xs','sh-s','sh-m','sh-l','sh-xl','sh-2xl','sh-3xl'].forEach(id=>sv(id,'0'));

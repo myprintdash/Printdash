@@ -537,24 +537,70 @@ tbody tr:hover td{background:var(--surface2)}
 
 <!-- MODAL: NEW SHIPMENT -->
 <div class="overlay" id="modal-ship">
-  <div class="modal">
+  <div class="modal" style="width:min(620px,100%)">
     <div class="modal-header"><div class="modal-title">New Shipment</div><button class="btn btn-ghost btn-sm" onclick="closeModal('ship')">✕</button></div>
-    <div class="modal-body">
-      <div class="form-row">
-        <div class="fgrp"><label>Customer Name *</label><input type="text" id="ms-cust" placeholder="e.g. Acme Corp"></div>
-        <div class="fgrp"><label>Shipment Reference *</label><input type="text" id="ms-ref" placeholder="e.g. SHP-001"></div>
+    <div class="modal-body" style="overflow-y:auto">
+
+      <div class="fgrp" style="margin-bottom:16px">
+        <label style="font-size:13px">Customer Name *</label>
+        <div style="display:flex;gap:8px;align-items:stretch">
+          <select id="ms-cust-select" onchange="handleCustSelect(this.value)"
+            style="flex:1;padding:11px 12px;font-size:15px;border:1.5px solid var(--border2);border-radius:var(--radius);font-family:var(--font-body);color:var(--ink);background:var(--surface)">
+            <option value="">— Select customer —</option>
+          </select>
+          <button class="btn btn-sm btn-pink" onclick="openManageCustomers()" style="flex-shrink:0;padding:11px 16px;font-size:14px">⚙ Manage</button>
+        </div>
+        <input type="text" id="ms-cust" placeholder="Or type a new customer name here" style="margin-top:8px;font-size:14px;padding:10px 12px">
       </div>
-      <div class="form-row">
-        <div class="fgrp"><label>Date Received *</label><input type="date" id="ms-date"></div>
-        <div class="fgrp"><label>Design / Print Description</label><input type="text" id="ms-design" placeholder="e.g. Front logo + back text"></div>
+
+      <div class="form-row" style="margin-bottom:16px">
+        <div class="fgrp"><label style="font-size:13px">Shipment Reference *</label><input type="text" id="ms-ref" placeholder="e.g. SHP-001" style="font-size:15px;padding:11px 12px"></div>
+        <div class="fgrp"><label style="font-size:13px">Date Received *</label><input type="date" id="ms-date" style="font-size:15px;padding:11px 12px"></div>
       </div>
-      <div class="form-row">
-        <div class="fgrp"><label>Shirts Received *</label><input type="number" id="ms-shirts" min="0" placeholder="0"><div class="hint">Total shirts from customer</div></div>
-        <div class="fgrp"><label>Spare Shirts</label><input type="number" id="ms-spares" min="0" value="0"><div class="hint">Extra shirts for damage cover</div></div>
+
+      <div class="fgrp" style="margin-bottom:16px">
+        <label style="font-size:13px">Design / Print Description</label>
+        <input type="text" id="ms-design" placeholder="e.g. Front logo + back text" style="font-size:15px;padding:11px 12px">
       </div>
-      <div class="fgrp"><label>Notes</label><textarea id="ms-notes" rows="2" placeholder="Any additional notes…"></textarea></div>
+
+      <div class="form-row" style="margin-bottom:16px">
+        <div class="fgrp">
+          <label style="font-size:13px">Shirts Received *</label>
+          <input type="number" id="ms-shirts" min="0" placeholder="0" style="font-size:22px;padding:13px;font-weight:600">
+          <div class="hint">Total shirts from customer</div>
+        </div>
+        <div class="fgrp">
+          <label style="font-size:13px">Spare Shirts</label>
+          <input type="number" id="ms-spares" min="0" value="0" style="font-size:22px;padding:13px;font-weight:600">
+          <div class="hint">Extra shirts for damage cover</div>
+        </div>
+      </div>
+
+      <div class="fgrp">
+        <label style="font-size:13px">Notes</label>
+        <textarea id="ms-notes" rows="3" placeholder="Any additional notes…" style="font-size:14px;padding:11px 12px"></textarea>
+      </div>
     </div>
-    <div class="modal-footer"><button class="btn" onclick="closeModal('ship')">Cancel</button><button class="btn btn-pink" onclick="saveShipment()">Save Shipment</button></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('ship')">Cancel</button>
+      <button class="btn btn-pink" style="padding:12px 28px;font-size:16px" onclick="saveShipment()">Save Shipment</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: MANAGE CUSTOMERS -->
+<div class="overlay" id="modal-customers">
+  <div class="modal" style="width:min(420px,100%)">
+    <div class="modal-header"><div class="modal-title">Manage Customers</div><button class="btn btn-ghost btn-sm" onclick="closeModal('customers')">✕</button></div>
+    <div class="modal-body">
+      <div style="font-size:14px;color:var(--ink3);margin-bottom:1rem">Add your customers — they appear in the dropdown when creating shipments.</div>
+      <div id="customer-list" style="margin-bottom:1rem;max-height:300px;overflow-y:auto"></div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="new-customer-input" placeholder="Type customer name…" style="flex:1;font-size:15px;padding:10px 12px" onkeydown="if(event.key==='Enter')addCustomer()">
+        <button class="btn btn-pink" onclick="addCustomer()" style="padding:10px 18px;font-size:15px">+ Add</button>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-pink" style="padding:10px 24px" onclick="closeModal('customers')">Done</button></div>
   </div>
 </div>
 
@@ -911,7 +957,7 @@ function renderShipments(){
 }
 
 async function saveShipment(){
-  const cust=v('ms-cust')||document.getElementById('ms-cust-select')?.value||'',ref=v('ms-ref'),date=v('ms-date'),shirts=parseInt(v('ms-shirts'))||0,spares=parseInt(v('ms-spares'))||0;
+  const cust=v('ms-cust')||(document.getElementById('ms-cust-select')?.value||'')||document.getElementById('ms-cust-select')?.value||'',ref=v('ms-ref'),date=v('ms-date'),shirts=parseInt(v('ms-shirts'))||0,spares=parseInt(v('ms-spares'))||0;
   if(!cust||!ref||!date||!shirts){toast('Fill in all required fields.','err');return;}
   try{
     await db.collection('shipments').add({customer:cust,ref,date,shirts,spares,design:v('ms-design'),notes:v('ms-notes'),createdBy:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});

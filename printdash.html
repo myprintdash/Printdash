@@ -511,7 +511,7 @@ tbody tr:hover td{background:var(--surface2)}
 
 <!-- MODAL: EDIT SHIPMENT -->
 <div class="overlay" id="modal-edit-ship">
-  <div class="modal">
+  <div class="modal" style="width:min(640px,100%)">
     <div class="modal-header"><div class="modal-title">Edit Shipment</div><button class="btn btn-ghost btn-sm" onclick="closeModal('edit-ship')">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="es-id">
@@ -768,7 +768,7 @@ function launchApp(){
   if(role==='admin'){document.getElementById('nav-users').style.display='';document.getElementById('nav-log').style.display='';}
   document.getElementById('dash-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   document.getElementById('rpt-date').textContent=new Date().toLocaleDateString();
-  show('app');loadDashboard();
+  show('app');loadPresets();loadDashboard();
 }
 
 // ═══════ NAV ═══════
@@ -1259,6 +1259,72 @@ async function seedShirts(){
   btn.textContent = '✅ Done!'; btn.disabled = true;
   await loadShirts();
 }
+
+// ═══════ PRESETS ═══════
+let presets = { customers: [], designs: [] };
+
+async function loadPresets(){
+  try{
+    const snap = await db.collection('presets').doc('data').get();
+    if(snap.exists) presets = snap.data();
+  }catch(e){}
+  refreshDatalist('cust-list', presets.customers||[]);
+  refreshDatalist('design-list', presets.designs||[]);
+}
+
+async function savePresets(){
+  try{
+    await db.collection('presets').doc('data').set(presets);
+  }catch(e){ toast('Could not save presets: '+e.message,'err'); }
+}
+
+function refreshDatalist(listId, items){
+  const dl = document.getElementById(listId);
+  if(!dl) return;
+  dl.innerHTML = items.map(i=>`<option value="${i}">`).join('');
+}
+
+function openPresetManager(type){
+  document.getElementById('preset-type').value = type;
+  document.getElementById('preset-title').textContent = type === 'customers' ? 'Manage Customer Presets' : 'Manage Design Presets';
+  renderPresetList(type);
+  openModal('presets');
+}
+
+function renderPresetList(type){
+  const items = presets[type]||[];
+  const container = document.getElementById('preset-list');
+  if(!items.length){ container.innerHTML='<div style="color:var(--ink3);font-style:italic;font-size:13px">No presets yet. Add one below.</div>'; return; }
+  container.innerHTML = items.map((item,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="flex:1;font-size:14px">${item}</span>
+      <button class="btn btn-sm btn-danger" onclick="removePreset('${type}',${i})">Remove</button>
+    </div>
+  `).join('');
+}
+
+async function addPresetItem(){
+  const type = document.getElementById('preset-type').value;
+  const val = document.getElementById('preset-new').value.trim();
+  if(!val){ toast('Please type something first.','err'); return; }
+  if(!presets[type]) presets[type]=[];
+  if(presets[type].includes(val)){ toast('Already exists!','err'); return; }
+  presets[type].push(val);
+  await savePresets();
+  refreshDatalist(type==='customers'?'cust-list':'design-list', presets[type]);
+  renderPresetList(type);
+  document.getElementById('preset-new').value='';
+  toast('Added!','ok');
+}
+
+async function removePreset(type, idx){
+  presets[type].splice(idx,1);
+  await savePresets();
+  refreshDatalist(type==='customers'?'cust-list':'design-list', presets[type]);
+  renderPresetList(type);
+  toast('Removed.','ok');
+}
+
 // ═══════ MODALS ═══════
 function openModal(name){
   if(name==='order'){populateShipDrop();sv('mo-cust','');document.getElementById('mo-hint').textContent='';}

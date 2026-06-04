@@ -446,7 +446,7 @@ tbody tr:hover td{background:var(--surface2)}
     <div class="modal-body">
       <input type="hidden" id="sh-id">
       <div class="form-row">
-        <div class="fgrp"><label>Shirt Name *</label><input type="text" id="sh-name" placeholder="e.g. Gildan Softstyle Tee"></div>
+        <div class="fgrp"><label>Shirt Name *</label><input type="text" id="sh-name" placeholder="e.g. Imperial" value="Imperial"></div>
         <div class="fgrp"><label>SKU</label><input type="text" id="sh-sku" placeholder="e.g. GLD-64000"></div>
       </div>
       <div class="form-row">
@@ -1077,7 +1077,7 @@ function renderShirts(){
 }
 
 function openAddShirt(){
-  sv('sh-id','');sv('sh-name','');sv('sh-sku','');sv('sh-color','');sv('sh-notes','');
+  sv('sh-id','');sv('sh-name','Imperial');sv('sh-sku','');sv('sh-color','');sv('sh-notes','');
   ['sh-xs','sh-s','sh-m','sh-l','sh-xl','sh-2xl','sh-3xl'].forEach(id=>sv(id,'0'));
   openModal('shirt');
 }
@@ -1240,7 +1240,7 @@ async function seedShirts(){
       const existing = await db.collection('shirts').where('color','==',color).limit(1).get();
       if(existing.empty){
         await db.collection('shirts').add({
-          name: color, sku: '', color: color, notes: '',
+          name: 'Imperial', sku: '', color: color, notes: '',
           xs:0, s:0, m:0, l:0, xl:0, xxl:0, xxxl:0,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });

@@ -171,6 +171,33 @@ tbody tr:hover td{background:var(--surface2)}
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+
+/* ── MOBILE NAV ── */
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:8px;margin-left:auto;flex-shrink:0}
+.hamburger span{display:block;width:24px;height:2px;background:rgba(255,255,255,.8);border-radius:2px;transition:all .2s}
+.mobile-menu{display:none;position:fixed;top:64px;left:0;right:0;bottom:0;background:rgba(15,15,14,.6);z-index:50;backdrop-filter:blur(2px)}
+.mobile-menu.open{display:block}
+.mobile-nav{position:absolute;top:0;left:0;right:0;background:#1a1a1a;padding:0.5rem;display:flex;flex-direction:column;gap:2px;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.mobile-nav button{padding:14px 20px;border-radius:var(--radius);border:none;background:transparent;color:rgba(255,255,255,.7);cursor:pointer;font-family:var(--font-body);font-size:16px;font-weight:500;text-align:left;transition:all .15s}
+.mobile-nav button:hover,.mobile-nav button.active{background:rgba(255,255,255,.1);color:#fff}
+.mobile-nav .nav-divider{height:1px;background:rgba(255,255,255,.1);margin:4px 0}
+@media(max-width:768px){
+  .topbar-nav{display:none!important}
+  .hamburger{display:flex}
+  .main{padding:1rem}
+  .form-row{grid-template-columns:1fr!important}
+  .metrics{grid-template-columns:1fr 1fr!important}
+  .rpt-metrics{grid-template-columns:1fr 1fr!important}
+  .page-header{flex-direction:column;gap:.75rem}
+  .page-actions{width:100%}
+  .card-header{flex-direction:column;align-items:flex-start}
+  .filters{width:100%}
+  .search-input{width:100%!important}
+  table{font-size:13px}
+  thead th,tbody td{padding:8px!important}
+  .topbar-right .user-meta{display:none}
+  .btn-logout{font-size:11px;padding:4px 8px}
+}
 @media print{
   .topbar,.page-actions,.filters,.btn,.no-print{display:none!important}
   .main{padding:0}.print-header{display:block;margin-bottom:1rem}
@@ -310,6 +337,10 @@ tbody tr:hover td{background:var(--surface2)}
       <button onclick="nav('users')" id="nav-users" style="display:none">Users</button>
       <button onclick="nav('log')" id="nav-log" style="display:none">Activity Log</button>
     </nav>
+    <!-- Hamburger for mobile -->
+    <button class="hamburger" id="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
     <div class="topbar-right">
       <div class="user-chip">
         <div class="user-av" id="top-av">?</div>
@@ -318,7 +349,24 @@ tbody tr:hover td{background:var(--surface2)}
       <button class="btn-logout" onclick="doLogout()">Sign out</button>
     </div>
   </div>
-  <main class="main">
+  
+<!-- MOBILE MENU -->
+<div class="mobile-menu" id="mobile-menu" onclick="closeMobileMenu()">
+  <div class="mobile-nav" onclick="event.stopPropagation()">
+    <button onclick="mobileNav('dashboard')" id="mnav-dashboard">📊 Dashboard</button>
+    <button onclick="mobileNav('shipments')" id="mnav-shipments">📦 Shipments</button>
+    <button onclick="mobileNav('orders')" id="mnav-orders">🖨 Production</button>
+    <button onclick="mobileNav('inventory')" id="mnav-inventory">📋 Inventory</button>
+    <button onclick="mobileNav('reports')" id="mnav-reports">📄 Reports</button>
+    <button onclick="mobileNav('shirts')" id="mnav-shirts">👕 Shirts</button>
+    <div class="nav-divider" id="mnav-admin-divider" style="display:none"></div>
+    <button onclick="mobileNav('users')" id="mnav-users" style="display:none">👥 Users</button>
+    <button onclick="mobileNav('log')" id="mnav-log" style="display:none">📝 Activity Log</button>
+    <div class="nav-divider"></div>
+    <button onclick="doLogout()" style="color:rgba(255,100,100,.8)">🚪 Sign Out</button>
+  </div>
+</div>
+<main class="main">
 
     <!-- DASHBOARD -->
     <div id="page-dashboard" class="page active">
@@ -765,7 +813,13 @@ function launchApp(){
   document.getElementById('top-av').textContent=ini;
   document.getElementById('top-name').textContent=name;
   document.getElementById('top-role').textContent=role;
-  if(role==='admin'){document.getElementById('nav-users').style.display='';document.getElementById('nav-log').style.display='';}
+  if(role==='admin'){
+    document.getElementById('nav-users').style.display='';
+    document.getElementById('nav-log').style.display='';
+    document.getElementById('mnav-users').style.display='';
+    document.getElementById('mnav-log').style.display='';
+    document.getElementById('mnav-admin-divider').style.display='';
+  }
   document.getElementById('dash-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   document.getElementById('rpt-date').textContent=new Date().toLocaleDateString();
   show('app');loadPresets();loadDashboard();
@@ -1258,6 +1312,24 @@ async function seedShirts(){
   toast(`Added ${added} shirt colors! (${colors.length - added} already existed)`, 'ok');
   btn.textContent = '✅ Done!'; btn.disabled = true;
   await loadShirts();
+}
+
+
+// ═══════ MOBILE NAV ═══════
+function toggleMobileMenu(){
+  const menu = document.getElementById('mobile-menu');
+  menu.classList.toggle('open');
+}
+function closeMobileMenu(){
+  document.getElementById('mobile-menu').classList.remove('open');
+}
+function mobileNav(page){
+  closeMobileMenu();
+  nav(page);
+  // Update mobile nav active state
+  document.querySelectorAll('.mobile-nav button').forEach(b=>b.classList.remove('active'));
+  const mb = document.getElementById('mnav-'+page);
+  if(mb) mb.classList.add('active');
 }
 
 // ═══════ PRESETS ═══════

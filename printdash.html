@@ -1115,6 +1115,30 @@ async function loadShirts(){
   const snap = await db.collection('shirts').orderBy('createdAt','desc').get();
   allShirts = snap.docs.map(d=>({id:d.id,...d.data()}));
   renderShirts();
+  // Add event delegation for inline size inputs
+  const tbody = document.getElementById('shirt-tbody');
+  if(tbody && !tbody._hasListeners){
+    tbody._hasListeners = true;
+    tbody.addEventListener('focus', e=>{
+      if(e.target.classList.contains('sz-input')){
+        e.target.style.borderColor='var(--pink)';
+        e.target.style.background='var(--pink2)';
+        e.target.select();
+      }
+    }, true);
+    tbody.addEventListener('blur', e=>{
+      if(e.target.classList.contains('sz-input')){
+        e.target.style.borderColor='var(--border)';
+        e.target.style.background='var(--surface)';
+        updateShirtSize(e.target.dataset.id, e.target.dataset.field, e.target.value, e.target.closest('tr'));
+      }
+    }, true);
+    tbody.addEventListener('keydown', e=>{
+      if(e.target.classList.contains('sz-input')){
+        if(e.key==='Enter') e.target.blur();
+      }
+    });
+  }
 }
 
 function renderShirts(){
@@ -1128,13 +1152,7 @@ function renderShirts(){
   );
   if(!list.length){tbody.innerHTML='<tr class="empty-row"><td colspan="13">No shirts found</td></tr>';return;}
 
-  const sz = (id,field,val) => `<td style="padding:4px 8px">
-    <input type="number" min="0" value="${val||0}"
-      style="width:56px;text-align:center;border:1.5px solid var(--border);border-radius:6px;padding:5px 4px;font-size:15px;font-weight:500;background:var(--surface);cursor:text;font-family:var(--font-body);color:var(--ink)"
-      onfocus="this.style.borderColor='var(--pink)';this.style.background='var(--pink2)';this.select()"
-      onblur="this.style.borderColor='var(--border)';this.style.background='var(--surface)';updateShirtSize('${id}','${field}',this.value,this.closest('tr'))"
-      onkeydown="if(event.key==='Enter'){this.blur()}if(event.key==='Tab'){event.preventDefault();const inputs=this.closest('tr').querySelectorAll('input[type=number]');const arr=Array.from(inputs);const i=arr.indexOf(this);if(arr[i+1])arr[i+1].focus()}"
-    ></td>`;
+  const sz = (id,field,val) => '<td style="padding:4px 8px"><input type="number" min="0" value="'+(val||0)+'" data-id="'+id+'" data-field="'+field+'" class="sz-input" style="width:56px;text-align:center;border:1.5px solid var(--border);border-radius:6px;padding:5px 4px;font-size:15px;font-weight:500;background:var(--surface);cursor:text;font-family:var(--font-body);color:var(--ink)"></td>';
 
   tbody.innerHTML=list.map(s=>{
     const total=(s.xs||0)+(s.s||0)+(s.m||0)+(s.l||0)+(s.xl||0)+(s.xxl||0)+(s.xxxl||0);

@@ -830,7 +830,7 @@ function launchApp(){
   }
   document.getElementById('dash-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   document.getElementById('rpt-date').textContent=new Date().toLocaleDateString();
-  show('app');loadPresets();loadDashboard();
+  show('app');loadPresets();loadCustomers();loadDashboard();
 }
 
 // ═══════ NAV ═══════
@@ -911,7 +911,7 @@ function renderShipments(){
 }
 
 async function saveShipment(){
-  const cust=v('ms-cust'),ref=v('ms-ref'),date=v('ms-date'),shirts=parseInt(v('ms-shirts'))||0,spares=parseInt(v('ms-spares'))||0;
+  const cust=v('ms-cust')||document.getElementById('ms-cust-select')?.value||'',ref=v('ms-ref'),date=v('ms-date'),shirts=parseInt(v('ms-shirts'))||0,spares=parseInt(v('ms-spares'))||0;
   if(!cust||!ref||!date||!shirts){toast('Fill in all required fields.','err');return;}
   try{
     await db.collection('shipments').add({customer:cust,ref,date,shirts,spares,design:v('ms-design'),notes:v('ms-notes'),createdBy:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
@@ -1407,6 +1407,76 @@ function mobileNav(page){
   if(mb) mb.classList.add('active');
 }
 
+
+// ═══════ CUSTOMER PRESETS ═══════
+let customerList = [];
+
+async function loadCustomers(){
+  try{
+    const snap = await db.collection('presets').doc('customers').get();
+    if(snap.exists) customerList = snap.data().list || [];
+  }catch(e){ customerList = []; }
+  refreshCustomerDropdown();
+}
+
+async function saveCustomers(){
+  await db.collection('presets').doc('customers').set({ list: customerList });
+}
+
+function refreshCustomerDropdown(){
+  const sel = document.getElementById('ms-cust-select');
+  if(!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— Select customer —</option>' +
+    customerList.map(c => `<option value="${c}"${c===current?' selected':''}>${c}</option>`).join('');
+}
+
+function handleCustSelect(val){
+  const input = document.getElementById('ms-cust');
+  if(val && input) input.value = val;
+}
+
+function openManageCustomers(){
+  renderCustomerList();
+  document.getElementById('modal-customers').classList.add('open');
+}
+
+function renderCustomerList(){
+  const container = document.getElementById('customer-list');
+  if(!container) return;
+  if(!customerList.length){
+    container.innerHTML = '<div style="color:var(--ink3);font-style:italic;font-size:13px;padding:8px 0">No customers yet. Add one below.</div>';
+    return;
+  }
+  container.innerHTML = customerList.map((c,i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span style="flex:1;font-size:15px;font-weight:500">${c}</span>
+      <button class="btn btn-sm btn-danger" onclick="removeCustomer(${i})">Remove</button>
+    </div>
+  `).join('');
+}
+
+async function addCustomer(){
+  const input = document.getElementById('new-customer-input');
+  const val = input.value.trim();
+  if(!val){ toast('Please type a customer name.','err'); return; }
+  if(customerList.includes(val)){ toast('Already exists!','err'); return; }
+  customerList.push(val);
+  await saveCustomers();
+  refreshCustomerDropdown();
+  renderCustomerList();
+  input.value = '';
+  toast(val + ' added!','ok');
+}
+
+async function removeCustomer(idx){
+  customerList.splice(idx,1);
+  await saveCustomers();
+  refreshCustomerDropdown();
+  renderCustomerList();
+  toast('Removed.','ok');
+}
+
 // ═══════ PRESETS ═══════
 let presets = { customers: [], designs: [] };
 
@@ -1475,7 +1545,7 @@ async function removePreset(type, idx){
 // ═══════ MODALS ═══════
 function openModal(name){
   if(name==='order'){populateShipDrop();sv('mo-cust','');document.getElementById('mo-hint').textContent='';}
-  if(name==='ship')sv('ms-date',new Date().toISOString().split('T')[0]);
+  if(name==='ship'){sv('ms-date',new Date().toISOString().split('T')[0]);sv('ms-cust','');refreshCustomerDropdown();const sel=document.getElementById('ms-cust-select');if(sel)sel.value='';}
   document.getElementById('modal-'+name).classList.add('open');
 }
 function closeModal(name){document.getElementById('modal-'+name).classList.remove('open');}

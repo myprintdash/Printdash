@@ -802,15 +802,22 @@ function badge(s){
 // ═══════ DASHBOARD ═══════
 async function loadDashboard(){
   await fetchAll();
+  // Also fetch shirts catalog totals
+  const shirtSnap = await db.collection('shirts').get();
+  allShirts = shirtSnap.docs.map(d=>({id:d.id,...d.data()}));
+  const shirtRack = allShirts.reduce((a,s)=>
+    a+(s.xs||0)+(s.s||0)+(s.m||0)+(s.l||0)+(s.xl||0)+(s.xxl||0)+(s.xxxl||0), 0);
+
   const rack=allShipments.reduce((a,s)=>a+onRack(s),0);
+  const totalRack = rack + shirtRack;
   const tsp=allShipments.reduce((a,s)=>a+(s.spares||0),0);
   const usp=allOrders.reduce((a,o)=>a+(o.sparesUsed||0),0);
   const done=allOrders.filter(o=>o.status==='completed'||o.status==='spare_used').length;
   const def=allOrders.reduce((a,o)=>a+(o.defects||0),0);
   document.getElementById('dash-metrics').innerHTML=`
-    <div class="metric"><div class="metric-label">Shirts on Rack</div><div class="metric-value">${rack}</div><div class="metric-sub">Awaiting / in production</div></div>
+    <div class="metric"><div class="metric-label">Shirts on Rack</div><div class="metric-value">${totalRack}</div><div class="metric-sub">${rack} in production · ${shirtRack} spare stock</div></div>
     <div class="metric m-pink"><div class="metric-label">Total Shipments</div><div class="metric-value">${allShipments.length}</div><div class="metric-sub">${allShipments.reduce((a,s)=>a+(s.shirts||0),0)} shirts total</div></div>
-    <div class="metric m-teal"><div class="metric-label">Spares Available</div><div class="metric-value">${tsp-usp}</div><div class="metric-sub">of ${tsp} received</div></div>
+    <div class="metric m-teal"><div class="metric-label">Spares Available</div><div class="metric-value">${shirtRack}</div><div class="metric-sub">across ${allShirts.length} colors</div></div>
     <div class="metric"><div class="metric-label">Production Orders</div><div class="metric-value">${allOrders.length}</div><div class="metric-sub">${done} completed</div></div>
     <div class="metric m-warn"><div class="metric-label">Total Defects</div><div class="metric-value">${def}</div><div class="metric-sub">Across all orders</div></div>
   `;

@@ -476,6 +476,7 @@ tbody tr:hover td{background:var(--surface2)}
           <input class="search-input" placeholder="Search name, SKU, color…" id="shirt-q" oninput="renderShirts()">
           <button class="btn btn-pink btn-sm" onclick="openModal('shirt')">+ Add Shirt Style</button>
           <button class="btn btn-sm" id="seed-btn" onclick="seedShirts()" style="background:var(--teal);color:#fff;border-color:var(--teal)">⬇ Import 27 Colors</button>
+          <button class="btn btn-sm" id="fix-names-btn" onclick="fixShirtNames()" style="background:var(--blue);color:#fff;border-color:var(--blue)">✏ Set All Names to Imperial</button>
         </div>
       </div>
       <div class="card" style="padding:0"><div class="table-wrap"><table>
@@ -1290,6 +1291,26 @@ async function saveShipShirts(){
 }
 
 
+
+async function fixShirtNames(){
+  const btn = document.getElementById('fix-names-btn');
+  btn.textContent = 'Updating...'; btn.disabled = true;
+  try{
+    const snap = await db.collection('shirts').get();
+    const batch = db.batch();
+    snap.docs.forEach(doc => {
+      batch.update(doc.ref, { name: 'Imperial' });
+    });
+    await batch.commit();
+    await loadShirts();
+    toast('All shirt names updated to Imperial!', 'ok');
+    btn.textContent = '✅ Done!';
+  }catch(e){
+    toast('Error: '+e.message, 'err');
+    btn.textContent = '✏ Set All Names to Imperial';
+    btn.disabled = false;
+  }
+}
 async function seedShirts(){
   const colors = ["White", "Black", "Dark Heather Grey", "Ice Blue", "Kelly", "Midnight Navy", "Banana Cream", "Cardinal", "Charcoal", "Mint", "Black Forest", "Heather White", "Indigo", "Premium Heather", "Vintage Navy", "Vintage Royal", "Vintage Red", "Vintage Black", "Royal", "Macchiato", "Navy", "Bone", "Heather Navy", "Military Green", "Military", "Vintage Purple", "Forest Green"];
   const btn = document.getElementById('seed-btn');

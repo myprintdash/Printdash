@@ -533,6 +533,23 @@ tbody tr:hover td{background:var(--surface2)}
   </div>
 </div>
 
+
+<!-- MODAL: MANAGE DESIGNS -->
+<div class="overlay" id="modal-designs">
+  <div class="modal" style="width:min(420px,100%)">
+    <div class="modal-header"><div class="modal-title">Manage Print Descriptions</div><button class="btn btn-ghost btn-sm" onclick="closeModal('designs')">✕</button></div>
+    <div class="modal-body">
+      <div style="font-size:14px;color:var(--ink3);margin-bottom:1rem">Add your common print descriptions — they appear in the dropdown when creating shipments.</div>
+      <div id="design-list" style="margin-bottom:1rem;max-height:300px;overflow-y:auto"></div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="new-design-input" placeholder="e.g. Front logo + back text" style="flex:1;font-size:15px;padding:10px 12px" onkeydown="if(event.key==='Enter')addDesign()">
+        <button class="btn btn-pink" onclick="addDesign()" style="padding:10px 18px;font-size:15px">+ Add</button>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-pink" style="padding:10px 24px" onclick="closeModal('designs')">Done</button></div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <!-- MODAL: NEW SHIPMENT -->
@@ -560,7 +577,14 @@ tbody tr:hover td{background:var(--surface2)}
 
       <div class="fgrp" style="margin-bottom:16px">
         <label style="font-size:13px">Design / Print Description</label>
-        <input type="text" id="ms-design" placeholder="e.g. Front logo + back text" style="font-size:15px;padding:11px 12px">
+        <div style="display:flex;gap:8px;align-items:stretch">
+          <select id="ms-design-select" onchange="handleDesignSelect(this.value)"
+            style="flex:1;padding:11px 12px;font-size:15px;border:1.5px solid var(--border2);border-radius:var(--radius);font-family:var(--font-body);color:var(--ink);background:var(--surface)">
+            <option value="">— Select design —</option>
+          </select>
+          <button class="btn btn-sm btn-pink" onclick="openManageDesigns()" style="flex-shrink:0;padding:11px 16px;font-size:14px">⚙ Manage</button>
+        </div>
+        <input type="text" id="ms-design" placeholder="Or type a new description here" style="margin-top:8px;font-size:14px;padding:10px 12px">
       </div>
 
       <div class="form-row" style="margin-bottom:16px">
@@ -876,7 +900,7 @@ function launchApp(){
   }
   document.getElementById('dash-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   document.getElementById('rpt-date').textContent=new Date().toLocaleDateString();
-  show('app');loadPresets();loadCustomers();loadDashboard();
+  show('app');loadPresets();loadCustomers();loadDesigns();loadDashboard();
 }
 
 // ═══════ NAV ═══════
@@ -1453,6 +1477,74 @@ function mobileNav(page){
   if(mb) mb.classList.add('active');
 }
 
+
+
+// ═══════ DESIGN PRESETS ═══════
+let designList = [];
+
+async function loadDesigns(){
+  try{
+    const snap = await db.collection('presets').doc('designs').get();
+    if(snap.exists) designList = snap.data().list || [];
+  }catch(e){ designList = []; }
+  refreshDesignDropdown();
+}
+
+async function saveDesigns(){
+  try{ await db.collection('presets').doc('designs').set({ list: designList }); }catch(e){}
+}
+
+function refreshDesignDropdown(){
+  const sel = document.getElementById('ms-design-select');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">— Select design —</option>' +
+    designList.map(d => `<option value="${d}">${d}</option>`).join('');
+}
+
+function handleDesignSelect(val){
+  if(val) sv('ms-design', val);
+}
+
+function openManageDesigns(){
+  renderDesignList();
+  document.getElementById('modal-designs').classList.add('open');
+}
+
+function renderDesignList(){
+  const container = document.getElementById('design-list');
+  if(!container) return;
+  if(!designList.length){
+    container.innerHTML = '<div style="color:var(--ink3);font-style:italic;font-size:14px;padding:8px 0">No descriptions yet. Add one below.</div>';
+    return;
+  }
+  container.innerHTML = designList.map((d,i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:11px 0;border-bottom:1px solid var(--border)">
+      <span style="flex:1;font-size:15px">${d}</span>
+      <button class="btn btn-sm btn-danger" onclick="removeDesign(${i})">Remove</button>
+    </div>
+  `).join('');
+}
+
+async function addDesign(){
+  const input = document.getElementById('new-design-input');
+  const val = input ? input.value.trim() : '';
+  if(!val){ toast('Please type a description.','err'); return; }
+  if(designList.includes(val)){ toast('Already in list!','err'); return; }
+  designList.push(val);
+  await saveDesigns();
+  refreshDesignDropdown();
+  renderDesignList();
+  if(input) input.value = '';
+  toast('Added!','ok');
+}
+
+async function removeDesign(idx){
+  designList.splice(idx,1);
+  await saveDesigns();
+  refreshDesignDropdown();
+  renderDesignList();
+  toast('Removed.','ok');
+}
 
 // ═══════ CUSTOMER PRESETS ═══════
 let customerList = [];

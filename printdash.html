@@ -1622,17 +1622,32 @@ async function removeDesign(idx){
 
 
 // ═══════ SHIPMENT SHIRT ROWS ═══════
+function getColorOptions(selected=''){
+  const colors = allShirts.map(s=>s.color).filter(Boolean);
+  // Also add any manually typed colors already in rows
+  document.querySelectorAll('#shirt-rows .color-select').forEach(sel=>{
+    if(sel.value && !colors.includes(sel.value)) colors.push(sel.value);
+  });
+  const unique = [...new Set(colors)].sort();
+  return '<option value="">— Select color —</option>' +
+    unique.map(c=>`<option value="${c}"${c===selected?' selected':''}>${c}</option>`).join('') +
+    '<option value="__new__">+ Add new color…</option>';
+}
+
 function addShirtRow(color='', xs=0, s=0, m=0, l=0, xl=0, xxl=0, xxxl=0){
   const tbody = document.getElementById('shirt-rows');
   if(!tbody) return;
   const row = document.createElement('tr');
   row.innerHTML = `
-    <td style="padding:4px 6px;border:1px solid var(--border)">
-      <input type="text" placeholder="e.g. Premium Heather" value="${color}"
-        list="shirt-colors-list"
-        style="width:100%;border:none;outline:none;font-size:14px;padding:4px;font-family:var(--font-body)"
-        oninput="updateGrandTotal()">
-      <datalist id="shirt-colors-list"></datalist>
+    <td style="padding:4px 6px;border:1px solid var(--border);min-width:160px">
+      <select class="color-select"
+        style="width:100%;border:none;outline:none;font-size:14px;padding:5px 4px;font-family:var(--font-body);background:transparent;cursor:pointer"
+        onchange="handleColorSelect(this)">
+        ${getColorOptions(color)}
+      </select>
+      <input type="text" class="color-custom" placeholder="Type new color name" value=""
+        style="display:none;width:100%;border:none;border-top:1px solid var(--border);outline:none;font-size:14px;padding:5px 4px;font-family:var(--font-body)"
+        onblur="saveNewColor(this)">
     </td>
     ${['xs','s','m','l','xl','xxl','xxxl'].map((sz,i) => `
     <td style="padding:4px;border:1px solid var(--border)">
@@ -1652,6 +1667,48 @@ function addShirtRow(color='', xs=0, s=0, m=0, l=0, xl=0, xxl=0, xxxl=0){
     dl.innerHTML = allShirts.map(s=>`<option value="${s.color}">`).join('');
   }
   updateGrandTotal();
+}
+
+
+function handleColorSelect(sel){
+  const customInput = sel.nextElementSibling;
+  if(sel.value === '__new__'){
+    customInput.style.display = 'block';
+    customInput.focus();
+    sel.value = '';
+  } else {
+    if(customInput) customInput.style.display = 'none';
+  }
+  updateGrandTotal();
+}
+
+async function saveNewColor(input){
+  const val = input.value.trim();
+  if(!val){ input.style.display='none'; return; }
+  // Add to allShirts if not already there
+  const exists = allShirts.find(s=>s.color.toLowerCase()===val.toLowerCase());
+  if(!exists){
+    try{
+      const doc = await db.collection('shirts').add({
+        name:'Imperial', sku:'', color:val, notes:'',
+        xs:0, s:0, m:0, l:0, xl:0, xxl:0, xxxl:0,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+      allShirts.push({id:doc.id, name:'Imperial', color:val, xs:0,s:0,m:0,l:0,xl:0,xxl:0,xxxl:0});
+      toast(val+' added to shirt catalog!','ok');
+    }catch(e){ toast('Could not save: '+e.message,'err'); }
+  }
+  // Update the select in this row with new color selected
+  const sel = input.previousElementSibling;
+  // Rebuild options and select the new color
+  sel.innerHTML = getColorOptions(val);
+  sel.value = val;
+  input.style.display = 'none';
+  // Refresh all other dropdowns in the table too
+  document.querySelectorAll('#shirt-rows .color-select').forEach(s=>{
+    const cur = s.value;
+    s.innerHTML = getColorOptions(cur);
+  });
 }
 
 function updateRowTotal(input){
@@ -1690,9 +1747,11 @@ function getShirtBreakdown(){
   const rows = document.querySelectorAll('#shirt-rows tr');
   const breakdown = [];
   rows.forEach(row => {
-    const colorInput = row.querySelector('input[type=text]');
+    const colorSel = row.querySelector('.color-select');
+    const colorCustom = row.querySelector('.color-custom');
     const numInputs = row.querySelectorAll('input[type=number]');
-    const color = colorInput ? colorInput.value.trim() : '';
+    let color = colorSel ? colorSel.value : '';
+    if(color === '__new__' || color === '') color = colorCustom ? colorCustom.value.trim() : '';
     if(!color) return;
     const sizes = ['xs','s','m','l','xl','xxl','xxxl'];
     const entry = { color };

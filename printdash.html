@@ -648,16 +648,40 @@ tbody tr:hover td{background:var(--surface2)}
       </div>
 
       <!-- SPARE SHIRTS -->
-      <div class="form-row" style="margin-bottom:14px">
-        <div class="fgrp">
-          <label style="font-size:13px">Spare Shirts</label>
-          <input type="number" id="ms-spares" min="0" value="0" style="font-size:20px;padding:12px;font-weight:600">
-          <div class="hint">Extra shirts for damage cover</div>
+      <div style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label style="font-size:13px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em">Spare Shirts <span style="color:var(--ink3);font-weight:400;text-transform:none;font-size:12px">(extra shirts for damage cover)</span></label>
+          <button class="btn btn-sm" onclick="addSpareRow()" style="font-size:13px">+ Add Color</button>
         </div>
-        <div class="fgrp">
-          <label style="font-size:13px">Notes</label>
-          <textarea id="ms-notes" rows="3" placeholder="Any additional notes…" style="font-size:14px;padding:10px 12px"></textarea>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:14px">
+            <thead>
+              <tr style="background:var(--surface2)">
+                <th style="padding:8px 10px;text-align:left;border:1px solid var(--border);min-width:140px">Color</th>
+                <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">XS</th>
+                <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">S</th>
+                <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">M</th>
+                <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">L</th>
+                <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">XL</th>
+                <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">2XL</th>
+                <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">3XL</th>
+                <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">Total</th>
+                <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:40px"></th>
+              </tr>
+            </thead>
+            <tbody id="spare-rows"></tbody>
+          </table>
         </div>
+        <div style="text-align:right;margin-top:6px;font-size:14px;color:var(--ink2)">
+          Spare Total: <strong id="spare-total" style="color:var(--teal);font-size:16px">0</strong> shirts
+        </div>
+        <input type="hidden" id="ms-spares" value="0">
+      </div>
+
+      <!-- NOTES -->
+      <div class="fgrp" style="margin-bottom:14px">
+        <label style="font-size:13px">Notes</label>
+        <textarea id="ms-notes" rows="3" placeholder="Any additional notes…" style="font-size:14px;padding:10px 12px"></textarea>
       </div>
 
     </div>
@@ -1050,11 +1074,15 @@ async function saveShipment(){
   if(!sides){toast('Please select 1-Side or 2-Side print.','err');return;}
   if(breakdown.length===0){toast('Please add at least one shirt color.','err');return;}
   try{
-    const docRef = await db.collection('shipments').add({customer:cust,ref,date,shirts,spares,design:fullDesign,sides,breakdown,notes:v('ms-notes'),createdBy:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    const spareBreakdown = getSpareBreakdown();
+    const spares = spareBreakdown.reduce((a,r)=>a+r.total,0)||parseInt(document.getElementById('ms-spares')?.value)||0;
+    const docRef = await db.collection('shipments').add({customer:cust,ref,date,shirts,spares,design:fullDesign,sides,breakdown,spareBreakdown,notes:v('ms-notes'),createdBy:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     await logAct(`Created shipment ${ref} — ${cust}`);
     toast('Shipment saved!','ok');closeModal('ship');
     ['ms-cust','ms-design','ms-notes'].forEach(id=>sv(id,''));sv('ms-ref','');sv('ms-spares','0');
     const tbody=document.getElementById('shirt-rows');if(tbody)tbody.innerHTML='';
+    const spbody2=document.getElementById('spare-rows');if(spbody2)spbody2.innerHTML='';
+    const st2=document.getElementById('spare-total');if(st2)st2.textContent='0';
     document.getElementById('grand-total').textContent='0';
     const s1=document.getElementById('ms-side1');const s2=document.getElementById('ms-side2');
     if(s1)s1.checked=false;if(s2)s2.checked=false;highlightSide();
@@ -1632,6 +1660,114 @@ function getColorOptions(selected=''){
   return '<option value="">— Select color —</option>' +
     unique.map(c=>`<option value="${c}"${c===selected?' selected':''}>${c}</option>`).join('') +
     '<option value="__new__">+ Add new color…</option>';
+}
+
+
+function addSpareRow(color='', xs=0, s=0, m=0, l=0, xl=0, xxl=0, xxxl=0){
+  const tbody = document.getElementById('spare-rows');
+  if(!tbody) return;
+  const row = document.createElement('tr');
+  row.innerHTML = `
+    <td style="padding:4px 6px;border:1px solid var(--border);min-width:160px">
+      <select class="spare-color-select"
+        style="width:100%;border:none;outline:none;font-size:14px;padding:5px 4px;font-family:var(--font-body);background:transparent;cursor:pointer"
+        onchange="handleSpareColorSelect(this)">
+        ${getColorOptions(color)}
+      </select>
+      <input type="text" class="spare-color-custom" placeholder="Type new color name" value=""
+        style="display:none;width:100%;border:none;border-top:1px solid var(--border);outline:none;font-size:14px;padding:5px 4px;font-family:var(--font-body)"
+        onblur="saveNewSpareColor(this)">
+    </td>
+    ${['xs','s','m','l','xl','xxl','xxxl'].map((sz,i) => `
+    <td style="padding:4px;border:1px solid var(--border)">
+      <input type="number" min="0" value="${[xs,s,m,l,xl,xxl,xxxl][i]||0}"
+        style="width:48px;text-align:center;border:none;outline:none;font-size:14px;padding:4px;font-family:var(--font-body)"
+        oninput="updateSpareRowTotal(this);updateSpareTotal()">
+    </td>`).join('')}
+    <td style="padding:4px;border:1px solid var(--border);text-align:center;font-weight:700;color:var(--teal)" class="spare-row-total">${xs+s+m+l+xl+xxl+xxxl}</td>
+    <td style="padding:4px;border:1px solid var(--border);text-align:center">
+      <button onclick="this.closest('tr').remove();updateSpareTotal()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:2px 6px">✕</button>
+    </td>
+  `;
+  tbody.appendChild(row);
+}
+
+function handleSpareColorSelect(sel){
+  const customInput = sel.nextElementSibling;
+  if(sel.value === '__new__'){
+    customInput.style.display = 'block';
+    customInput.focus();
+    sel.value = '';
+  } else {
+    if(customInput) customInput.style.display = 'none';
+  }
+  updateSpareTotal();
+}
+
+async function saveNewSpareColor(input){
+  const val = input.value.trim();
+  if(!val){ input.style.display='none'; return; }
+  const exists = allShirts.find(s=>s.color.toLowerCase()===val.toLowerCase());
+  if(!exists){
+    try{
+      const doc = await db.collection('shirts').add({
+        name:'Imperial', sku:'', color:val, notes:'',
+        xs:0,s:0,m:0,l:0,xl:0,xxl:0,xxxl:0,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+      allShirts.push({id:doc.id,name:'Imperial',color:val,xs:0,s:0,m:0,l:0,xl:0,xxl:0,xxxl:0});
+      toast(val+' added to catalog!','ok');
+    }catch(e){}
+  }
+  const sel = input.previousElementSibling;
+  sel.innerHTML = getColorOptions(val);
+  sel.value = val;
+  input.style.display = 'none';
+  document.querySelectorAll('#spare-rows .spare-color-select').forEach(s=>{
+    const cur = s.value;
+    s.innerHTML = getColorOptions(cur);
+  });
+}
+
+function updateSpareRowTotal(input){
+  const row = input.closest('tr');
+  const inputs = row.querySelectorAll('input[type=number]');
+  let total = 0;
+  inputs.forEach(inp => total += parseInt(inp.value)||0);
+  const totalCell = row.querySelector('.spare-row-total');
+  if(totalCell) totalCell.textContent = total;
+}
+
+function updateSpareTotal(){
+  const rows = document.querySelectorAll('#spare-rows tr');
+  let total = 0;
+  rows.forEach(row => {
+    const inputs = row.querySelectorAll('input[type=number]');
+    inputs.forEach(inp => total += parseInt(inp.value)||0);
+  });
+  const st = document.getElementById('spare-total');
+  if(st) st.textContent = total;
+  const spField = document.getElementById('ms-spares');
+  if(spField) spField.value = total;
+}
+
+function getSpareBreakdown(){
+  const rows = document.querySelectorAll('#spare-rows tr');
+  const breakdown = [];
+  rows.forEach(row => {
+    const colorSel = row.querySelector('.spare-color-select');
+    const colorCustom = row.querySelector('.spare-color-custom');
+    const numInputs = row.querySelectorAll('input[type=number]');
+    let color = colorSel ? colorSel.value : '';
+    if(color === '__new__' || color === '') color = colorCustom ? colorCustom.value.trim() : '';
+    if(!color) return;
+    const sizes = ['xs','s','m','l','xl','xxl','xxxl'];
+    const entry = { color };
+    numInputs.forEach((inp,i) => entry[sizes[i]] = parseInt(inp.value)||0);
+    entry.total = Object.values(entry).filter(v=>typeof v==='number').reduce((a,b)=>a+b,0);
+    breakdown.push(entry);
+  });
+  return breakdown;
 }
 
 function addShirtRow(color='', xs=0, s=0, m=0, l=0, xl=0, xxl=0, xxxl=0){

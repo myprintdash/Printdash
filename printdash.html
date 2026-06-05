@@ -571,7 +571,15 @@ tbody tr:hover td{background:var(--surface2)}
       </div>
 
       <div class="form-row" style="margin-bottom:16px">
-        <div class="fgrp"><label style="font-size:13px">Shipment Reference *</label><input type="text" id="ms-ref" placeholder="e.g. SHP-001" style="font-size:15px;padding:11px 12px"></div>
+        <div class="fgrp"><label style="font-size:13px">Shipment Reference *</label>
+          <div style="display:flex;align-items:center;border:1.5px solid var(--border2);border-radius:var(--radius);overflow:hidden;background:var(--surface);focus-within:border-color:var(--pink)">
+            <span style="padding:11px 14px;background:var(--surface2);font-size:16px;font-weight:700;color:var(--pink);border-right:1.5px solid var(--border2);flex-shrink:0;letter-spacing:0.5px">SO</span>
+            <input type="text" id="ms-ref" placeholder="1234" inputmode="numeric"
+              style="font-size:16px;padding:11px 12px;border:none;outline:none;flex:1;font-family:var(--font-mono);background:var(--surface);color:var(--ink)"
+              oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+          </div>
+          <div class="hint">Numbers only — SO prefix is added automatically</div>
+        </div>
         <div class="fgrp"><label style="font-size:13px">Date Received *</label><input type="date" id="ms-date" style="font-size:15px;padding:11px 12px"></div>
       </div>
 
@@ -981,13 +989,13 @@ function renderShipments(){
 }
 
 async function saveShipment(){
-  const cust=v('ms-cust')||(document.getElementById('ms-cust-select')?.value||'')||document.getElementById('ms-cust-select')?.value||'',ref=v('ms-ref'),date=v('ms-date'),shirts=parseInt(v('ms-shirts'))||0,spares=parseInt(v('ms-spares'))||0;
+  const cust=v('ms-cust')||(document.getElementById('ms-cust-select')?.value||'')||document.getElementById('ms-cust-select')?.value||'',ref='SO'+v('ms-ref'),date=v('ms-date'),shirts=parseInt(v('ms-shirts'))||0,spares=parseInt(v('ms-spares'))||0;
   if(!cust||!ref||!date||!shirts){toast('Fill in all required fields.','err');return;}
   try{
     await db.collection('shipments').add({customer:cust,ref,date,shirts,spares,design:v('ms-design'),notes:v('ms-notes'),createdBy:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     await logAct(`Created shipment ${ref} — ${cust}`);
     toast('Shipment saved!','ok');closeModal('ship');
-    ['ms-cust','ms-ref','ms-design','ms-notes'].forEach(id=>sv(id,''));
+    ['ms-cust','ms-design','ms-notes'].forEach(id=>sv(id,''));sv('ms-ref','');
     sv('ms-shirts','');sv('ms-spares','0');sv('ms-date',new Date().toISOString().split('T')[0]);
     await loadShipments();
   }catch(e){toast(e.message,'err');}

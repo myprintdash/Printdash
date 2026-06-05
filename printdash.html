@@ -107,9 +107,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--pink);box-shadow:0 0 
 .card-title{font-weight:700;font-size:14px;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em}
 .card-body{padding:1.25rem}
 .table-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:15px}
-thead th{padding:10px 14px;text-align:left;font-size:13px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap}
-tbody td{padding:13px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+table{width:100%;border-collapse:collapse;font-size:16px}
+thead th{padding:12px 14px;text-align:left;font-size:14px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap}
+tbody td{padding:16px 14px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:16px}
 tbody tr:last-child td{border-bottom:none}
 tbody tr:hover td{background:var(--surface2)}
 .mono{font-family:var(--font-mono);font-size:12px}
@@ -1024,7 +1024,7 @@ function renderShipments(){
   tbody.innerHTML=allShipments.filter(s=>s.customer.toLowerCase().includes(q)||s.ref.toLowerCase().includes(q)).map(s=>{
     const used=sparesUsed(s.id),left=(s.spares||0)-used;
     return`<tr>
-      <td class="mono">${s.ref}</td><td><strong>${s.customer}</strong></td><td>${s.date||'—'}</td>
+      <td class="mono" style="font-size:16px;font-weight:700;color:var(--pink)">${s.ref}</td><td style="font-size:16px"><strong>${s.customer}</strong></td><td>${s.date||'—'}</td>
       <td>${s.shirts}</td><td>${s.spares}</td>
       <td><span style="color:${left<=1?'var(--red)':left<=3?'var(--yellow)':'var(--teal)'};font-weight:600">${left}</span></td>
       <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink3);font-size:12px">${s.design||'—'}</td>

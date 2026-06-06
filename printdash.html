@@ -199,6 +199,10 @@ tbody tr:hover td{background:var(--surface2)}
   .btn-logout{font-size:11px;padding:4px 8px}
 }
 @media print{
+  #job-sheet{display:block!important}
+  body > *:not(#job-sheet){display:none!important}
+  #job-sheet{position:fixed;top:0;left:0;width:100%}
+
   .topbar,.page-actions,.filters,.btn,.no-print{display:none!important}
   .main{padding:0}.print-header{display:block;margin-bottom:1rem}
   body{background:#fff}
@@ -210,6 +214,7 @@ tbody tr:hover td{background:var(--surface2)}
   .rpt-metrics{grid-template-columns:1fr 1fr}
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
@@ -695,6 +700,63 @@ tbody tr:hover td{background:var(--surface2)}
       <button class="btn" onclick="closeModal('print-status')">Cancel</button>
       <button class="btn btn-pink" style="padding:12px 28px;font-size:16px" onclick="savePrintStatus()">Save Status</button>
     </div>
+  </div>
+</div>
+
+
+<!-- MODAL: QR CODE -->
+<div class="overlay" id="modal-qr">
+  <div class="modal" style="width:min(520px,100%)">
+    <div class="modal-header">
+      <div class="modal-title">📱 QR Code</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('qr')">✕</button>
+    </div>
+    <div class="modal-body" style="text-align:center">
+      <div id="qr-ship-info" style="background:var(--surface2);border-radius:var(--radius);padding:10px 14px;font-size:14px;margin-bottom:1.25rem;text-align:left"></div>
+
+      <!-- QR Code display -->
+      <div id="qr-code-container" style="display:inline-block;padding:16px;background:#fff;border:2px solid var(--border);border-radius:var(--radius-lg);margin-bottom:1rem"></div>
+
+      <div id="qr-ref-label" style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--pink);margin-bottom:.5rem"></div>
+      <div id="qr-details" style="font-size:13px;color:var(--ink3);margin-bottom:1.5rem"></div>
+
+      <!-- Scan to update status -->
+      <div style="background:var(--surface2);border-radius:var(--radius-lg);padding:1rem;margin-bottom:1rem;text-align:left">
+        <div style="font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:.5rem">📌 How to use:</div>
+        <div style="font-size:13px;color:var(--ink3);line-height:1.8">
+          1. Click <strong>Print Job Sheet</strong> to print the QR label<br>
+          2. Attach it to the shirt batch before printing<br>
+          3. Scan with phone camera to open this SO directly<br>
+          4. Tap <strong>🖨 Print</strong> → mark colors done as you go
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-pink" onclick="printJobSheet()" style="padding:12px 24px;font-size:15px">🖨 Print Job Sheet</button>
+        <button class="btn" onclick="downloadQR()" style="padding:12px 24px;font-size:15px">⬇ Download QR</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PRINT JOB SHEET (hidden, only visible when printing) -->
+<div id="job-sheet" style="display:none">
+  <div style="font-family:Arial,sans-serif;max-width:400px;margin:0 auto;padding:20px;border:3px solid #000">
+    <div style="text-align:center;margin-bottom:16px">
+      <img id="js-logo" style="height:60px;object-fit:contain" alt="Printdash">
+    </div>
+    <div style="text-align:center;margin-bottom:16px" id="js-qr"></div>
+    <div style="text-align:center;font-size:28px;font-weight:900;letter-spacing:2px;margin-bottom:8px" id="js-ref"></div>
+    <div style="border-top:2px solid #000;border-bottom:2px solid #000;padding:8px 0;margin-bottom:8px">
+      <table style="width:100%;font-size:14px;border-collapse:collapse">
+        <tr><td style="padding:3px 0"><strong>Customer:</strong></td><td id="js-customer" style="text-align:right"></td></tr>
+        <tr><td style="padding:3px 0"><strong>Date:</strong></td><td id="js-date" style="text-align:right"></td></tr>
+        <tr><td style="padding:3px 0"><strong>Print:</strong></td><td id="js-design" style="text-align:right"></td></tr>
+        <tr><td style="padding:3px 0"><strong>Total Shirts:</strong></td><td id="js-shirts" style="text-align:right;font-weight:700;font-size:16px"></td></tr>
+      </table>
+    </div>
+    <div id="js-breakdown" style="font-size:13px;margin-bottom:8px"></div>
+    <div style="text-align:center;font-size:11px;color:#666;margin-top:12px">Scan QR to update print status</div>
   </div>
 </div>
 
@@ -1235,7 +1297,7 @@ function launchApp(){
   }
   document.getElementById('dash-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   document.getElementById('rpt-date').textContent=new Date().toLocaleDateString();
-  show('app');loadPresets();loadCustomers();loadDesigns();loadDashboard();
+  show('app');loadPresets();loadCustomers();loadDesigns();loadDashboard();setTimeout(checkQRParam,1500);
 }
 
 // ═══════ NAV ═══════
@@ -1337,6 +1399,7 @@ function renderShipments(){
       <td>${(s.defectIn||0)+(s.defectPrint||0)>0?`<span style="color:var(--red);font-weight:700">⚠ ${(s.defectIn||0)+(s.defectPrint||0)}</span>`:'<span style="color:var(--ink4)">—</span>'}</td>
       <td>${badge(shipSt(s))}</td>
       <td class="no-print" style="white-space:nowrap">
+        <button class="btn btn-sm" onclick="openQR('${s.id}')" style="background:#f0f0ff;color:#5b5bd6;border-color:#c4c4f8">📱 QR</button>
         <button class="btn btn-sm" onclick="openPrintStatus('${s.id}')" style="background:var(--teal2);color:var(--teal);border-color:var(--teal)">🖨 Print</button>
         <button class="btn btn-sm" onclick="openDefectModal('${s.id}')" style="background:var(--yellow-bg);color:var(--yellow);border-color:var(--yellow)">⚠ Defects</button>
         <button class="btn btn-sm btn-ghost" onclick="editShipment('${s.id}')">Edit</button>
@@ -2337,6 +2400,111 @@ function getEditBreakdown(tbodyId){
 }
 
 
+
+
+// ═══════ QR CODE ═══════
+let currentQRShip = null;
+
+function openQR(shipId){
+  const ship = allShipments.find(s=>s.id===shipId);
+  if(!ship) return;
+  currentQRShip = ship;
+
+  document.getElementById('qr-ship-info').innerHTML =
+    `<strong>${ship.customer}</strong> · <span style="color:var(--pink);font-weight:700">${ship.ref}</span> · ${ship.shirts} shirts · ${ship.design||''} · ${ship.date||''}`;
+  document.getElementById('qr-ref-label').textContent = ship.ref;
+  document.getElementById('qr-details').textContent =
+    `${ship.customer} · ${ship.shirts} shirts · ${ship.design||''}`;
+
+  // Generate QR code pointing to the app URL with this shipment ID
+  const qrContainer = document.getElementById('qr-code-container');
+  qrContainer.innerHTML = '';
+  const appUrl = window.location.href.split('?')[0] + '?so=' + ship.id;
+  new QRCode(qrContainer, {
+    text: appUrl,
+    width: 200,
+    height: 200,
+    colorDark: '#0f0f0e',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  const m = document.getElementById('modal-qr');
+  if(m){m.style.display='flex';m.classList.add('open');}
+}
+
+function printJobSheet(){
+  if(!currentQRShip) return;
+  const ship = currentQRShip;
+
+  // Fill job sheet
+  const jsLogo = document.getElementById('js-logo');
+  // Get logo from topbar
+  const topLogo = document.querySelector('.topbar-logo img');
+  if(jsLogo && topLogo) jsLogo.src = topLogo.src;
+
+  document.getElementById('js-ref').textContent = ship.ref;
+  document.getElementById('js-customer').textContent = ship.customer;
+  document.getElementById('js-date').textContent = ship.date||'';
+  document.getElementById('js-design').textContent = ship.design||'';
+  document.getElementById('js-shirts').textContent = ship.shirts;
+
+  // Breakdown
+  const bd = ship.breakdown||[];
+  const sizes = ['xs','s','m','l','xl','xxl','xxxl'];
+  const sizeLabels = ['XS','S','M','L','XL','2XL','3XL'];
+  document.getElementById('js-breakdown').innerHTML = bd.length>0 ?
+    '<strong style="font-size:13px">Colors & Sizes:</strong><br>' +
+    bd.map(r=>`<div style="padding:2px 0;font-size:13px">• <strong>${r.color}</strong>: ${sizes.map((sz,i)=>r[sz]>0?`${sizeLabels[i]}=${r[sz]}`:'').filter(Boolean).join(', ')} (${r.total||0} total)</div>`).join('') : '';
+
+  // Generate QR for job sheet
+  const jsQR = document.getElementById('js-qr');
+  jsQR.innerHTML = '';
+  const appUrl = window.location.href.split('?')[0] + '?so=' + ship.id;
+  new QRCode(jsQR, {
+    text: appUrl,
+    width: 160,
+    height: 160,
+    colorDark: '#000000',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  // Print after QR renders
+  setTimeout(()=>{
+    const jobSheet = document.getElementById('job-sheet');
+    jobSheet.style.display = 'block';
+    window.print();
+    setTimeout(()=>{ jobSheet.style.display='none'; }, 1000);
+  }, 300);
+}
+
+function downloadQR(){
+  const canvas = document.querySelector('#qr-code-container canvas');
+  if(!canvas){ toast('QR not ready yet, try again','err'); return; }
+  const link = document.createElement('a');
+  link.download = (currentQRShip?.ref||'qr') + '_qr.png';
+  link.href = canvas.toDataURL();
+  link.click();
+  toast('QR downloaded!','ok');
+}
+
+// Auto-open SO from QR scan
+function checkQRParam(){
+  const params = new URLSearchParams(window.location.search);
+  const soId = params.get('so');
+  if(soId){
+    // Wait for data to load then open print status
+    setTimeout(async()=>{
+      await fetchAll();
+      const ship = allShipments.find(s=>s.id===soId);
+      if(ship){
+        toast(`QR scanned: ${ship.ref}`, 'ok');
+        openPrintStatus(soId);
+      }
+    }, 2000);
+  }
+}
 
 // ═══════ PRINT STATUS ═══════
 async function openPrintStatus(shipId){

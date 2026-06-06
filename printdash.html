@@ -2730,7 +2730,7 @@ async function printAllLabels(){
         const ctx = canvas.getContext('2d');
         ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,H);
 
-        const qrSz=140, qrXp=6, qrYp=(H-qrSz)/2;
+        const qrSz=140, qrXp=20, qrYp=(H-qrSz)/2;
         if(qrCanvas) ctx.drawImage(qrCanvas, qrXp, qrYp, qrSz, qrSz);
 
         const textX=qrXp+qrSz+10, availW=W-textX-6;
@@ -2906,7 +2906,7 @@ function printQRLabel(){
 
     // QR on left, vertically centered - smaller
     const qrSize = 140;
-    const qrX = 6;
+    const qrX = 20;
     const qrY = (H - qrSize) / 2;
     if(qrCanvas) ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
 

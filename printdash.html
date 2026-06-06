@@ -2753,8 +2753,8 @@ function printQRLabel(){
     // Create label canvas: 2.25" x 1.25" at 203 DPI (Jadens native DPI)
     // 2.25 * 203 = 457px wide, 1.25 * 203 = 254px tall
     const DPI = 203;
-    const W = Math.round(2.25 * DPI); // 457
-    const H = Math.round(1.25 * DPI); // 254
+    const W = 457; // exactly 2.25 inches at 203 DPI
+    const H = 254; // exactly 1.25 inches at 203 DPI
 
     const canvas = document.createElement('canvas');
     canvas.width = W;
@@ -2825,7 +2825,7 @@ function printQRLabel(){
     link.href = canvas.toDataURL('image/png');
     link.click();
 
-    toast('Label image downloaded! Open it and print at actual size (2.25×1.25").', 'ok');
+    toast('Label downloaded! Right-click the file → Print → select Jadens → Actual Size.', 'ok');
   }, 400);
 }
 

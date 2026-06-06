@@ -1703,7 +1703,7 @@ function renderOrders(){
     return(!f||o.status===f)&&(!q||(s?s.customer.toLowerCase().includes(q):false));
   }).map(function(o){
     var s=allShipments.find(function(x){return x.id===o.shipmentId;});
-    var delBtn=isAdmin?'<button class="btn btn-sm btn-danger" onclick="deleteOrder(''+o.id+'')">Del</button>':'';
+    var delBtn=isAdmin?('<button class="btn btn-sm btn-danger" onclick="deleteOrder(\'' + o.id + '\')">Del</button>'):'';
     return '<tr>'+
       '<td class="mono">'+o.id.slice(0,8)+'</td>'+
       '<td class="mono">'+(s?s.ref:'—')+'</td>'+
@@ -1714,7 +1714,7 @@ function renderOrders(){
       '<td>'+badge(o.status)+'</td>'+
       '<td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink2);font-size:14px">'+(o.notes||'—')+'</td>'+
       '<td class="no-print" style="white-space:nowrap">'+
-        '<button class="btn btn-sm btn-ghost" onclick="openUpdOrder(''+o.id+'')">Update</button> '+
+        '<button class="btn btn-sm btn-ghost" onclick="openUpdOrder(\'' + o.id + '\')">Update</button> '+
         delBtn+
       '</td>'+
     '</tr>';

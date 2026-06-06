@@ -3548,47 +3548,61 @@ async function openDefectModal(shipId){
 }
 
 async function saveDefects(){
-  const shipId = v('def-shipid');
-  const inItems = getDefectRows('def-in-rows');
-  const printItems = getDefectRows('def-print-rows');
-  const inQty = inItems.reduce((a,r)=>a+r.qty,0);
-  const inSpare = inItems.reduce((a,r)=>a+r.spare,0);
-  const printQty = printItems.reduce((a,r)=>a+r.qty,0);
-  const printSpare = printItems.reduce((a,r)=>a+r.spare,0);
+  var shipId = v('def-shipid');
+  var inItems = getDefectRows('def-in-rows');
+  var printItems = getDefectRows('def-print-rows');
+  var inQty = 0; inItems.forEach(function(r){ inQty += r.qty; });
+  var inSpare = 0; inItems.forEach(function(r){ inSpare += r.spare; });
+  var printQty = 0; printItems.forEach(function(r){ printQty += r.qty; });
+  var printSpare = 0; printItems.forEach(function(r){ printSpare += r.spare; });
+  var totalDefects = inQty + printQty;
+  var totalSpareUsed = inSpare + printSpare;
 
   try{
-    const snap = await db.collection('defects').where('shipmentId','==',shipId).get();
-    await Promise.all(snap.docs.map(d=>d.ref.delete()));
+    var snap = await db.collection('defects').where('shipmentId','==',shipId).get();
+    await Promise.all(snap.docs.map(function(d){ return d.ref.delete(); }));
 
-    if(inItems.length>0){
+    if(inItems.length > 0){
       await db.collection('defects').add({
-        shipmentId: shipId, type:'inspection', qty:inQty, spareUsed:inSpare,
-        items:inItems, createdBy:currentUser.uid,
-        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+        'shipmentId': shipId,
+        'type': 'inspection',
+        'qty': inQty,
+        'spareUsed': inSpare,
+        'items': inItems,
+        'createdBy': currentUser.uid,
+        'createdAt': firebase.firestore.FieldValue.serverTimestamp()
       });
     }
-    if(printItems.length>0){
+    if(printItems.length > 0){
       await db.collection('defects').add({
-        shipmentId: shipId, type:'print', qty:printQty, spareUsed:printSpare,
-        items:printItems, createdBy:currentUser.uid,
-        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+        'shipmentId': shipId,
+        'type': 'print',
+        'qty': printQty,
+        'spareUsed': printSpare,
+        'items': printItems,
+        'createdBy': currentUser.uid,
+        'createdAt': firebase.firestore.FieldValue.serverTimestamp()
       });
     }
 
-    const totalDefects = inQty + printQty;
-    const totalSpareUsed = inSpare + printSpare;
     await db.collection('shipments').doc(shipId).update({
-      defectIn:inQty, defectInSpare:inSpare,
-      defectPrint:printQty, defectPrintSpare:printSpare,
-      totalDefects: totalDefects, totalSpareUsed: totalSpareUsed
+      'defectIn': inQty,
+      'defectInSpare': inSpare,
+      'defectPrint': printQty,
+      'defectPrintSpare': printSpare,
+      'totalDefects': totalDefects,
+      'totalSpareUsed': totalSpareUsed
     });
 
-    await logAct(`Defects for ${allShipments.find(s=>s.id===shipId)?.ref}: ${inQty} on arrival + ${printQty} after print`);
-    toast(`Saved! ${inQty} on arrival · ${printQty} after print`, 'ok');
+    var ship = allShipments.find(function(s){ return s.id === shipId; });
+    await logAct('Defects for ' + (ship ? ship.ref : shipId) + ': ' + inQty + ' on arrival + ' + printQty + ' after print');
+    toast('Saved! ' + inQty + ' on arrival · ' + printQty + ' after print', 'ok');
     closeModal('defects');
     await loadShipments();
     await loadDashboard();
-  }catch(e){ toast('Error: '+e.message,'err'); }
+  } catch(e) {
+    toast('Error: ' + e.message, 'err');
+  }
 }
 
 // ═══════ CUSTOMER PRESETS ═══════

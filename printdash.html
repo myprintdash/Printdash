@@ -1787,39 +1787,126 @@ async function loadReports(){
   renderReports();
 }
 function renderReports(){
-  const filter=document.getElementById('rpt-cust').value;
-  const targets=filter?allShipments.filter(s=>s.customer===filter):allShipments;
-  const grouped={};targets.forEach(s=>{if(!grouped[s.customer])grouped[s.customer]=[];grouped[s.customer].push(s);});
+  var filter=document.getElementById('rpt-cust').value;
+  var targets=filter?allShipments.filter(function(s){return s.customer===filter;}):allShipments;
+  var grouped={};
+  targets.forEach(function(s){if(!grouped[s.customer])grouped[s.customer]=[];grouped[s.customer].push(s);});
   document.getElementById('rpt-date').textContent=new Date().toLocaleDateString();
-  const body=document.getElementById('rpt-body');
+  var body=document.getElementById('rpt-body');
   if(!Object.keys(grouped).length){body.innerHTML='<div style="text-align:center;padding:3rem;color:var(--ink4)">No data available</div>';return;}
-  body.innerHTML=Object.entries(grouped).map(([cust,ships])=>{
-    const ti=ships.reduce((a,s)=>a+(s.shirts||0),0);
-    const tsp=ships.reduce((a,s)=>a+(s.spares||0),0);
-    const su=ships.reduce((a,s)=>a+sparesUsed(s.id),0);
-    const rack=ships.reduce((a,s)=>a+onRack(s),0);
-    const co=allOrders.filter(o=>ships.some(s=>s.id===o.shipmentId));
-    const done=co.filter(o=>o.status==='completed'||o.status==='spare_used').length;
-    const def=co.reduce((a,o)=>a+(o.defects||0),0);
-    return`<div class="rpt-card">
-      <div class="rpt-cust">${cust}</div>
-      <div class="rpt-metrics">
-        <div class="rpt-m"><div class="v">${ti}</div><div class="l">Shirts In</div></div>
-        <div class="rpt-m"><div class="v">${rack}</div><div class="l">On Rack</div></div>
-        <div class="rpt-m"><div class="v" style="color:${tsp-su<=2?'var(--red)':'var(--teal)'}">${tsp-su}</div><div class="l">Spares Left</div></div>
-        <div class="rpt-m"><div class="v">${done}/${co.length}</div><div class="l">Orders Done</div></div>
-      </div>
-      <div class="rpt-sec"><div class="rpt-sec-title">Shipments</div>
-        <table><thead><tr><th>Ref</th><th>Date</th><th>Shirts</th><th>Spares In</th><th>Used</th><th>Left</th><th>Status</th></tr></thead>
-        <tbody>${ships.map(s=>{const u=sparesUsed(s.id),l=(s.spares||0)-u;return`<tr><td class="mono">${s.ref}</td><td>${s.date||'—'}</td><td>${s.shirts}</td><td>${s.spares}</td><td>${u}</td><td><strong style="color:${l<=1?'var(--red)':l<=3?'var(--yellow)':'var(--teal)'}">${l}</strong></td><td>${badge(shipSt(s))}</td></tr>`}).join('')}</tbody></table>
-      </div>
-      ${co.length?`<div class="rpt-sec"><div class="rpt-sec-title">Production Orders${def>0?` <span style="color:var(--red);float:right">${def} defect${def!==1?'s':''}</span>`:''}</div>
-        <table><thead><tr><th>Order ID</th><th>Qty</th><th>Spares Used</th><th>Defects</th><th>Status</th><th>Notes</th></tr></thead>
-        <tbody>${co.map(o=>`<tr><td class="mono">${o.id.slice(0,8)}</td><td>${o.qty}</td><td>${o.sparesUsed||0}</td><td>${o.defects>0?`<span style="color:var(--red);font-weight:600">${o.defects}</span>`:'0'}</td><td>${badge(o.status)}</td><td style="font-size:12px;color:var(--ink3)">${o.notes||'—'}</td></tr>`).join('')}</tbody></table>
-      </div>`:`<div style="font-size:13px;color:var(--ink3);font-style:italic;margin-top:1rem">No production orders yet.</div>`}
-    </div>`;
+
+  body.innerHTML=Object.entries(grouped).map(function(entry){
+    var cust=entry[0], ships=entry[1];
+    var ti=ships.reduce(function(a,s){return a+(s.shirts||0);},0);
+    var tsp=ships.reduce(function(a,s){return a+(s.spares||0);},0);
+    var su=ships.reduce(function(a,s){return a+sparesUsed(s.id);},0);
+    var rack=ships.reduce(function(a,s){return a+onRack(s);},0);
+
+    // Defect totals from shipment fields
+    var totalDefIn=ships.reduce(function(a,s){return a+(s.defectIn||0);},0);
+    var totalDefPrint=ships.reduce(function(a,s){return a+(s.defectPrint||0);},0);
+    var totalDef=totalDefIn+totalDefPrint;
+    var totalSpareUsedDef=ships.reduce(function(a,s){return a+(s.totalSpareUsed||0);},0);
+
+    // Print status counts
+    var completed=ships.filter(function(s){return s.printStatus==='done';}).length;
+    var printing=ships.filter(function(s){return s.printStatus==='printing';}).length;
+    var received=ships.filter(function(s){return !s.printStatus||s.printStatus==='received';}).length;
+
+    // Sort ships by SO number
+    var sortedShips=[].concat(ships).sort(function(a,b){
+      return (parseInt((a.ref||'').replace(/[^0-9]/g,''))||0)-(parseInt((b.ref||'').replace(/[^0-9]/g,''))||0);
+    });
+
+    // Defect detail rows
+    var defRows=sortedShips.filter(function(s){return (s.defectIn||0)+(s.defectPrint||0)>0;}).map(function(s){
+      var rows='';
+      if(s.defectIn>0){
+        rows+='<tr style="background:var(--yellow-bg)">'+
+          '<td class="mono" style="font-weight:700;color:var(--pink)">'+s.ref+'</td>'+
+          '<td><span style="background:#f0d060;color:#7a6000;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600">📦 Inspection In</span></td>'+
+          '<td style="font-weight:700;color:var(--red);text-align:center">'+s.defectIn+'</td>'+
+          '<td style="text-align:center">'+(s.defectInSpare||0)+'</td>'+
+          '<td style="font-size:12px;color:var(--ink3)">'+(s.defectInDesc||'—')+'</td>'+
+        '</tr>';
+      }
+      if(s.defectPrint>0){
+        rows+='<tr style="background:var(--red-bg)">'+
+          '<td class="mono" style="font-weight:700;color:var(--pink)">'+s.ref+'</td>'+
+          '<td><span style="background:#f5c0c0;color:#900;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600">🖨 After Print</span></td>'+
+          '<td style="font-weight:700;color:var(--red);text-align:center">'+s.defectPrint+'</td>'+
+          '<td style="text-align:center">'+(s.defectPrintSpare||0)+'</td>'+
+          '<td style="font-size:12px;color:var(--ink3)">'+(s.defectPrintDesc||'—')+'</td>'+
+        '</tr>';
+      }
+      return rows;
+    }).join('');
+
+    // Defect section
+    var defSection='';
+    if(totalDef>0){
+      defSection=
+        '<div class="rpt-sec" style="margin-top:1rem">'+
+        '<div class="rpt-sec-title" style="color:var(--red)">⚠ Defect Report — '+totalDef+' defect'+(totalDef!==1?'s':'')+'</div>'+
+        '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem">'+
+          '<div style="background:var(--surface2);border-radius:var(--radius);padding:.75rem;text-align:center"><div style="font-size:24px;font-weight:700;color:var(--red)">'+totalDef+'</div><div style="font-size:11px;color:var(--ink3);text-transform:uppercase">Total Defects</div></div>'+
+          '<div style="background:var(--yellow-bg);border:1px solid #f0d060;border-radius:var(--radius);padding:.75rem;text-align:center"><div style="font-size:24px;font-weight:700;color:var(--yellow)">'+totalDefIn+'</div><div style="font-size:11px;color:var(--ink3);text-transform:uppercase">On Arrival</div></div>'+
+          '<div style="background:var(--red-bg);border:1px solid #f5c0c0;border-radius:var(--radius);padding:.75rem;text-align:center"><div style="font-size:24px;font-weight:700;color:var(--red)">'+totalDefPrint+'</div><div style="font-size:11px;color:var(--ink3);text-transform:uppercase">After Print</div></div>'+
+          '<div style="background:var(--teal2);border:1px solid var(--teal);border-radius:var(--radius);padding:.75rem;text-align:center"><div style="font-size:24px;font-weight:700;color:var(--teal)">'+totalSpareUsedDef+'</div><div style="font-size:11px;color:var(--ink3);text-transform:uppercase">Spares Used</div></div>'+
+        '</div>'+
+        '<table><thead><tr><th>SO Ref</th><th>Type</th><th style="text-align:center">Defect Qty</th><th style="text-align:center">Spare Used</th><th>Notes</th></tr></thead>'+
+        '<tbody>'+defRows+'</tbody></table>'+
+        '</div>';
+    } else {
+      defSection='<div style="margin-top:1rem;padding:.75rem 1rem;background:var(--teal2);border-radius:var(--radius);font-size:14px;color:var(--teal);font-weight:600">✅ No defects recorded for this customer</div>';
+    }
+
+    return '<div class="rpt-card">'+
+      '<div class="rpt-cust">'+cust+'</div>'+
+
+      // Summary metrics - 5 boxes
+      '<div class="rpt-metrics" style="grid-template-columns:repeat(5,1fr)">'+
+        '<div class="rpt-m"><div class="v">'+ti+'</div><div class="l">Shirts In</div></div>'+
+        '<div class="rpt-m"><div class="v">'+rack+'</div><div class="l">On Rack</div></div>'+
+        '<div class="rpt-m"><div class="v" style="color:'+(tsp-su<=2?'var(--red)':'var(--teal)')+'">'+( tsp-su)+'</div><div class="l">Spares Left</div></div>'+
+        '<div class="rpt-m"><div class="v" style="color:var(--teal)">'+completed+'</div><div class="l">✅ Completed</div></div>'+
+        '<div class="rpt-m"><div class="v" style="color:'+(received+printing>0?'var(--yellow)':'var(--ink4)')+'">'+( received+printing)+'</div><div class="l">⏳ In Progress</div></div>'+
+      '</div>'+
+
+      // Status breakdown row
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;font-size:13px">'+
+        '<span style="padding:4px 12px;border-radius:20px;background:var(--teal2);color:var(--teal);font-weight:600">✅ Done: '+completed+'</span>'+
+        '<span style="padding:4px 12px;border-radius:20px;background:var(--yellow-bg);color:var(--yellow);font-weight:600">🖨 Printing: '+printing+'</span>'+
+        '<span style="padding:4px 12px;border-radius:20px;background:var(--surface2);color:var(--ink3);font-weight:600">📦 Received: '+received+'</span>'+
+        (totalDef>0?'<span style="padding:4px 12px;border-radius:20px;background:var(--red-bg);color:var(--red);font-weight:600">⚠ Defects: '+totalDef+'</span>':'')+
+      '</div>'+
+
+      // Shipments table
+      '<div class="rpt-sec"><div class="rpt-sec-title">Shipments ('+ships.length+')</div>'+
+        '<table><thead><tr><th>Ref</th><th>Date</th><th>Shirts</th><th>Design</th><th>Defects</th><th>Status</th></tr></thead>'+
+        '<tbody>'+sortedShips.map(function(s){
+          var def=(s.defectIn||0)+(s.defectPrint||0);
+          var statusLabel=s.printStatus==='done'?'✅ Done':s.printStatus==='printing'?'🖨 Printing':'📦 Received';
+          var statusColor=s.printStatus==='done'?'var(--teal)':s.printStatus==='printing'?'var(--yellow)':'var(--ink3)';
+          return '<tr>'+
+            '<td class="mono" style="font-weight:700;color:var(--pink)">'+s.ref+'</td>'+
+            '<td>'+( s.date||'—')+'</td>'+
+            '<td>'+s.shirts+'</td>'+
+            '<td style="font-size:12px;color:var(--ink3);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(s.design||'—')+'</td>'+
+            '<td>'+(def>0?'<span style="color:var(--red);font-weight:700">⚠ '+def+'</span>':'<span style="color:var(--teal)">✅</span>')+'</td>'+
+            '<td style="font-weight:600;color:'+statusColor+'">'+statusLabel+'</td>'+
+          '</tr>';
+        }).join('')+
+        '</tbody></table>'+
+      '</div>'+
+
+      // Defect report section
+      defSection+
+
+    '</div>';
   }).join('');
 }
+
 
 // ═══════ USERS ═══════
 async function loadUsers(){

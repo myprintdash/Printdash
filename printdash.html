@@ -2737,7 +2737,7 @@ function printQRLabel(){
   const appUrl = window.location.href.split('?')[0] + '?so=' + ship.id;
   const design = (ship.design||'').replace('2-Side Print — ','2S: ').replace('1-Side Print — ','1S: ');
 
-  // Generate QR on canvas
+  // Generate QR
   const tempDiv = document.createElement('div');
   tempDiv.style.cssText = 'position:fixed;left:-9999px;top:-9999px';
   document.body.appendChild(tempDiv);
@@ -2750,12 +2750,9 @@ function printQRLabel(){
   setTimeout(()=>{
     const qrCanvas = tempDiv.querySelector('canvas');
 
-    // Create label canvas: 2.25" x 1.25" at 203 DPI (Jadens native DPI)
-    // 2.25 * 203 = 457px wide, 1.25 * 203 = 254px tall
-    const DPI = 203;
-    const W = 457; // exactly 2.25 inches at 203 DPI
-    const H = 254; // exactly 1.25 inches at 203 DPI
-
+    // Build label on canvas at 203 DPI
+    const W = 457; // 2.25in at 203dpi
+    const H = 254; // 1.25in at 203dpi
     const canvas = document.createElement('canvas');
     canvas.width = W;
     canvas.height = H;
@@ -2765,24 +2762,23 @@ function printQRLabel(){
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, W, H);
 
-    // Draw QR on left - smaller so it fits nicely
-    const qrSize = 180; // about 0.89 inches
+    // QR on left, vertically centered
+    const qrSize = 180;
     const qrX = 8;
-    const qrY = (H - qrSize) / 2; // vertically centered
+    const qrY = (H - qrSize) / 2;
     if(qrCanvas) ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
 
-    // Draw text on right
+    // Text on right
     const textX = qrX + qrSize + 10;
-    const textW = W - textX - 8;
-    let textY = 20;
-
-    // SO number - auto-fit font size
-    ctx.fillStyle = '#000000';
     const availW = W - textX - 6;
+    let textY = 22;
+
+    // SO number - auto fit
+    ctx.fillStyle = '#000000';
     let fontSize = 34;
     ctx.font = 'bold ' + fontSize + 'px Arial';
     while(ctx.measureText(ship.ref).width > availW && fontSize > 18){
-      fontSize -= 1;
+      fontSize--;
       ctx.font = 'bold ' + fontSize + 'px Arial';
     }
     ctx.fillText(ship.ref, textX, textY + fontSize);
@@ -2790,48 +2786,108 @@ function printQRLabel(){
 
     // Pink line
     ctx.fillStyle = '#e91e8c';
-    ctx.fillRect(textX, textY, textW, 3);
+    ctx.fillRect(textX, textY, availW, 3);
     textY += 12;
 
     // Customer
     ctx.fillStyle = '#222222';
     ctx.font = 'bold 18px Arial';
-    const custText = ship.customer||'';
-    ctx.fillText(custText.length>16?custText.slice(0,16)+'…':custText, textX, textY + 18);
+    const cust = (ship.customer||'');
+    ctx.fillText(cust.length>18 ? cust.slice(0,18)+'…' : cust, textX, textY + 18);
     textY += 26;
 
     // Design info
     ctx.fillStyle = '#555555';
     ctx.font = '15px Arial';
-    const infoText = design + (ship.shirts?' · '+ship.shirts+' shirts':'');
-    // Word wrap
-    const words = infoText.split(' ');
+    const info = design + (ship.shirts ? ' · ' + ship.shirts + ' shirts' : '');
+    const words = info.split(' ');
     let line = '';
     for(let w of words){
       const test = line + w + ' ';
-      if(ctx.measureText(test).width > textW && line){
+      if(ctx.measureText(test).width > availW && line){
         ctx.fillText(line.trim(), textX, textY);
         textY += 18;
         line = w + ' ';
       } else { line = test; }
     }
     if(line.trim()) ctx.fillText(line.trim(), textX, textY);
-    textY += 22;
 
-    // Scan note
+    // Scan note at bottom
     ctx.fillStyle = '#999999';
     ctx.font = '12px Arial';
-    ctx.fillText('Scan to update status', textX, H - 10);
+    ctx.fillText('Scan to update status', textX, H - 8);
 
     document.body.removeChild(tempDiv);
 
-    // Download as PNG
-    const link = document.createElement('a');
-    link.download = ship.ref + '_label.png';
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+    // Open image in new tab - user presses Ctrl+P to print
+    const imgDataUrl = canvas.toDataURL('image/png');
+    const printWin = window.open('', '_blank');
+    printWin.document.write(`<!DOCTYPE html>
+<html>
+<head>
+<title>${ship.ref} Label</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  @page { size: 2.25in 1.25in; margin: 0; }
+  html, body {
+    width: 2.25in;
+    height: 1.25in;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+  }
+  img {
+    width: 2.25in;
+    height: 1.25in;
+    display: block;
+  }
+  .hint {
+    display: none;
+  }
+  @media screen {
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      background: #333;
+    }
+    img {
+      width: auto;
+      height: auto;
+      max-width: 90vw;
+      max-height: 90vh;
+      box-shadow: 0 4px 20px rgba(0,0,0,.5);
+    }
+    .hint {
+      display: block;
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #e91e8c;
+      color: white;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-family: Arial;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0,0,0,.3);
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="hint" onclick="window.print()">🖨 Click here to Print (then select Jadens, Actual Size)</div>
+  <img src="${imgDataUrl}">
+  <script>
+    // Auto-trigger print after short delay
+    setTimeout(() => window.print(), 800);
+  <\/script>
+</body>
+</html>`);
+    printWin.document.close();
 
-    toast('Label downloaded! Right-click the file → Print → select Jadens → Actual Size.', 'ok');
   }, 400);
 }
 

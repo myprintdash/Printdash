@@ -1595,7 +1595,7 @@ async function saveShipment(){
     const spareBreakdown = getSpareBreakdown();
     const spares = spareBreakdown.reduce((a,r)=>a+r.total,0)||parseInt(document.getElementById('ms-spares')?.value)||0;
     const docRef = await db.collection('shipments').add({customer:cust,ref:ref,date:date,shirts:shirts,spares:spares,design:fullDesign,sides:sides,breakdown:breakdown,spareBreakdown:spareBreakdown,notes:v('ms-notes'),createdBy:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-    await logAct(`Created shipment ${ref} — ${cust}`);
+    await logAct(`Created shipment ${ref:ref} — ${cust}`);
     toast('Shipment saved!','ok');closeModal('ship');
     ['ms-cust','ms-design','ms-notes'].forEach(id=>sv(id,''));sv('ms-ref','');sv('ms-spares','0');
     const tbody=document.getElementById('shirt-rows');if(tbody)tbody.innerHTML='';
@@ -1728,7 +1728,7 @@ async function saveOrder(){
   try{
     await db.collection('orders').add({shipmentId:shipmentId,qty:qty,status:v('mo-status'),sparesUsed:parseInt(v('mo-spares'))||0,defects:parseInt(v('mo-defects'))||0,notes:v('mo-notes'),createdBy:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     const s=allShipments.find(x=>x.id===shipmentId);
-    await logAct(`Created order for ${s?.customer||'?'} qty:${qty}`);
+    await logAct(`Created order for ${s?.customer||'?'} qty:${qty:qty}`);
     toast('Order saved!','ok');closeModal('order');
     sv('mo-notes','');sv('mo-qty','');sv('mo-spares','0');sv('mo-defects','0');
     await loadOrders();
@@ -1909,7 +1909,7 @@ function renderShirts(){
       ${sz(s.id,'xl',s.xl)}
       ${sz(s.id,'xxl',s.xxl)}
       ${sz(s.id,'xxxl',s.xxxl)}
-      <td id="total-${s.id}" style="font-weight:700;font-size:15px">${total}</td>
+      <td id="total-${s.id}" style="font-weight:700;font-size:15px">${total:total}</td>
       <td style="font-size:12px;color:var(--ink3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.notes||'—'}</td>
       <td class="no-print" style="white-space:nowrap">
         <button class="btn btn-sm btn-ghost" onclick="editShirt('${s.id}')">Edit</button>
@@ -2561,7 +2561,7 @@ function getEditBreakdown(tbodyId){
     if(!color)return;
     const nums=row.querySelectorAll('input[type=number]');
     const sizes=['xs','s','m','l','xl','xxl','xxxl'];
-    const entry={color};
+    const entry={color:color};
     nums.forEach((inp,i)=>entry[sizes[i]]=parseInt(inp.value)||0);
     entry.total=Object.values(entry).filter(v=>typeof v==='number').reduce((a,b)=>a+b,0);
     breakdown.push(entry);
@@ -3412,7 +3412,7 @@ async function savePrintStatus(){
   else if(anyDone && printStatus==='received') finalStatus='printing';
 
   try{
-    await db.collection('shipments').doc(shipId).update({printStatus:finalStatus, printProgress});
+    await db.collection('shipments').doc(shipId).update({printStatus:finalStatus, printProgress:printProgress});
     // Update local cache
     const ship = allShipments.find(s=>s.id===shipId);
     if(ship){ship.printStatus=finalStatus;ship.printProgress=printProgress;}

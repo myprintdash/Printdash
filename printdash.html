@@ -2768,11 +2768,11 @@ function printQRLabel(){
     const qrY = (H - qrSize) / 2;
     if(qrCanvas) ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
 
-    // Text on right - fixed positions to avoid overlap
+    // Text on right - clean fixed positions
     const textX = qrX + qrSize + 10;
     const availW = W - textX - 6;
 
-    // SO number at top - auto fit font
+    // SO number - auto shrink to fit
     ctx.fillStyle = '#000000';
     let fontSize = 30;
     ctx.font = 'bold ' + fontSize + 'px Arial';
@@ -2780,41 +2780,35 @@ function printQRLabel(){
       fontSize--;
       ctx.font = 'bold ' + fontSize + 'px Arial';
     }
-    ctx.fillText(ship.ref, textX, 38);
+    ctx.fillText(ship.ref, textX, 8 + fontSize);
 
     // Pink line
     ctx.fillStyle = '#e91e8c';
-    ctx.fillRect(textX, 48, availW, 2);
+    ctx.fillRect(textX, 50, availW, 2);
 
-    // Customer at fixed Y
+    // Customer
     ctx.fillStyle = '#222222';
     ctx.font = 'bold 16px Arial';
     const cust = (ship.customer||'');
-    ctx.fillText(cust.length>20 ? cust.slice(0,20)+'…' : cust, textX, 72);
+    ctx.fillText(cust.length>20 ? cust.slice(0,20)+'…' : cust, textX, 70);
 
-    // Design line 1
+    // Design info - split to 2 lines max
     ctx.fillStyle = '#555555';
     ctx.font = '14px Arial';
     const info = design + (ship.shirts ? ' · ' + ship.shirts + ' shirts' : '');
-    // Split into max 2 lines
     const words = info.split(' ');
-    let line1 = '', line2 = '';
-    let onLine2 = false;
-    for(let w of words){
+    let line1 = '', line2 = '', onLine2 = false;
+    for(const w of words){
       if(!onLine2){
         const test = line1 + w + ' ';
-        if(ctx.measureText(test).width > availW){
-          onLine2 = true;
-          line2 = w + ' ';
-        } else { line1 = test; }
-      } else {
-        line2 += w + ' ';
-      }
+        if(ctx.measureText(test).width > availW){ onLine2=true; line2=w+' '; }
+        else { line1=test; }
+      } else { line2 += w+' '; }
     }
-    ctx.fillText(line1.trim(), textX, 95);
-    if(line2.trim()) ctx.fillText(line2.trim().slice(0,28), textX, 113);
+    ctx.fillText(line1.trim(), textX, 90);
+    if(line2.trim()) ctx.fillText(line2.trim(), textX, 108);
 
-    // Scan note fixed at bottom
+    // Scan note at bottom
     ctx.fillStyle = '#aaaaaa';
     ctx.font = '11px Arial';
     ctx.fillText('Scan to update status', textX, H - 6);

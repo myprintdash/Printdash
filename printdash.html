@@ -1348,7 +1348,7 @@ async function runSetup(){
     const cfg={apiKey,authDomain,projectId,appId,storageBucket:projectId+'.appspot.com',messagingSenderId:''};
     initFb(cfg);
     const cred=await auth.createUserWithEmailAndPassword(email,pass);
-    await db.collection('users').doc(cred.user.uid).set({name,email,role:'admin',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    await db.collection('users').doc(cred.user.uid).set({name:name,email:email,role:'admin',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     saveCfg(cfg);
     ok.textContent='Admin account created! Logging you in…';ok.style.display='block';
     currentUser=cred.user;await loadProfile();
@@ -1437,7 +1437,7 @@ async function doRegister(){
   if(!name||!email||!pass){err.textContent='All fields required.';err.style.display='block';return;}
   try{
     const cred=await auth.createUserWithEmailAndPassword(email,pass);
-    await db.collection('users').doc(cred.user.uid).set({name,email,role,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    await db.collection('users').doc(cred.user.uid).set({name:name,email:email,role:role,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     ok.textContent=name+' registered! They can now sign in.';ok.style.display='block';
   }catch(e){err.textContent=e.message;err.style.display='block';}
 }
@@ -1674,7 +1674,7 @@ async function updateShipment(){
   try{
     await db.collection('shipments').doc(id).update({
       customer:cust,ref,date:v('es-date'),shirts,spares,
-      design:fullDesign,sides,breakdown,spareBreakdown,notes:v('es-notes')
+      design:fullDesign,sides:sides,breakdown:breakdown,spareBreakdown:spareBreakdown,notes:v('es-notes')
     });
     await logAct('Updated shipment '+ref);toast('Updated!','ok');closeModal('edit-ship');await loadShipments();
   }catch(e){toast(e.message,'err');}
@@ -1954,7 +1954,7 @@ async function saveShirt(){
   const name=v('sh-name');
   if(!name){toast('Shirt name is required.','err');return;}
   const data={
-    name,sku:v('sh-sku'),color:v('sh-color'),notes:v('sh-notes'),
+    name:name,sku:v('sh-sku'),color:v('sh-color'),notes:v('sh-notes'),
     xs:parseInt(v('sh-xs'))||0,s:parseInt(v('sh-s'))||0,m:parseInt(v('sh-m'))||0,
     l:parseInt(v('sh-l'))||0,xl:parseInt(v('sh-xl'))||0,
     xxl:parseInt(v('sh-2xl'))||0,xxxl:parseInt(v('sh-3xl'))||0,

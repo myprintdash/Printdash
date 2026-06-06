@@ -757,25 +757,24 @@ tbody tr:hover td{background:var(--surface2)}
   <div id="qr-label-inner" style="
     width:2.25in;
     height:1.25in;
-    padding:0.05in;
+    padding:0.04in 0.06in;
     box-sizing:border-box;
     font-family:Arial,sans-serif;
-    display:flex;
-    flex-direction:row;
+    display:grid;
+    grid-template-columns:auto 1fr;
     align-items:center;
-    gap:0.06in;
-    border:1px solid #000;
+    gap:0.08in;
     overflow:hidden;
     background:#fff;
   ">
-    <!-- QR on left -->
-    <div id="ql-qr" style="flex-shrink:0;display:flex;align-items:center;justify-content:center"></div>
-    <!-- Text on right -->
-    <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:3pt">
-      <div id="ql-ref" style="font-size:12pt;font-weight:900;letter-spacing:1px;line-height:1;color:#e91e8c;white-space:nowrap"></div>
-      <div id="ql-customer" style="font-size:7pt;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
-      <div id="ql-info" style="font-size:6pt;color:#555;line-height:1.3;overflow:hidden"></div>
-      <div style="font-size:5pt;color:#999">Scan to update status</div>
+    <!-- QR left -->
+    <div id="ql-qr" style="display:flex;align-items:center;justify-content:center"></div>
+    <!-- Info right -->
+    <div style="overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:2pt">
+      <div id="ql-ref" style="font-size:13pt;font-weight:900;letter-spacing:0.5px;line-height:1;color:#000;white-space:nowrap"></div>
+      <div style="height:1.5pt;background:#e91e8c;border-radius:1pt;margin:1pt 0"></div>
+      <div id="ql-customer" style="font-size:7.5pt;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#333"></div>
+      <div id="ql-info" style="font-size:6.5pt;color:#555;line-height:1.3;overflow:hidden"></div>
     </div>
   </div>
 </div>
@@ -2749,8 +2748,8 @@ function printQRLabel(){
   const appUrl = window.location.href.split('?')[0] + '?so=' + ship.id;
   new QRCode(qlQR, {
     text: appUrl,
-    width: 95,
-    height: 95,
+    width: 82,
+    height: 82,
     colorDark: '#000000',
     colorLight: '#ffffff',
     correctLevel: QRCode.CorrectLevel.M

@@ -392,6 +392,7 @@ tbody tr:hover td{background:var(--surface2)}
         <div class="page-actions no-print">
           <button class="btn btn-sm" onclick="loadDashboard()">↺ Refresh</button>
           <button class="btn btn-pink btn-sm" onclick="openModal('ship')">+ New Shipment</button>
+          <button class="btn btn-sm" onclick="printAllLabels()" style="background:#f0f0ff;color:#5b5bd6;border-color:#c4c4f8">📱 Print All QR Labels</button>
         </div>
       </div>
       <div class="metrics" id="dash-metrics"></div>
@@ -438,6 +439,7 @@ tbody tr:hover td{background:var(--surface2)}
         <div class="page-actions no-print filters">
           <input class="search-input" placeholder="Search customer or ref…" id="ship-q" oninput="renderShipments()">
           <button class="btn btn-pink btn-sm" onclick="openModal('ship')">+ New Shipment</button>
+          <button class="btn btn-sm" onclick="printAllLabels()" style="background:#f0f0ff;color:#5b5bd6;border-color:#c4c4f8">📱 Print All QR Labels</button>
         </div>
       </div>
       <div class="card" style="padding:0"><div class="table-wrap"><table>
@@ -2650,6 +2652,139 @@ function openDefectFromDetail(){
 function openQRFromDetail(){
   closeModal('so-detail');
   if(currentSODetailId) openQR(currentSODetailId);
+}
+
+
+// ═══════ PRINT ALL LABELS ═══════
+async function printAllLabels(){
+  if(!allShipments.length){ toast('No shipments to print.','err'); return; }
+  toast('Generating labels for ' + allShipments.length + ' SOs...', 'ok');
+
+  const baseUrl = window.location.href.split('?')[0];
+
+  // Generate a canvas for each shipment sequentially
+  async function makeLabel(ship){
+    return new Promise(resolve=>{
+      const design = (ship.design||'').replace('2-Side Print — ','2S: ').replace('1-Side Print — ','1S: ');
+      const appUrl = baseUrl + '?so=' + ship.id;
+
+      const tempDiv = document.createElement('div');
+      tempDiv.style.cssText = 'position:fixed;left:-9999px;top:-9999px';
+      document.body.appendChild(tempDiv);
+      new QRCode(tempDiv, {
+        text: appUrl, width:200, height:200,
+        colorDark:'#000000', colorLight:'#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+
+      setTimeout(()=>{
+        const qrCanvas = tempDiv.querySelector('canvas');
+        const W=457, H=254;
+        const canvas = document.createElement('canvas');
+        canvas.width=W; canvas.height=H;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle='#ffffff';
+        ctx.fillRect(0,0,W,H);
+
+        const qrSize=180, qrX=8, qrY=(H-qrSize)/2;
+        if(qrCanvas) ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
+
+        const textX=qrX+qrSize+10, availW=W-textX-6;
+
+        // SO number
+        ctx.fillStyle='#000000';
+        let fontSize=30;
+        ctx.font='bold '+fontSize+'px Arial';
+        while(ctx.measureText(ship.ref).width>availW && fontSize>14){ fontSize--; ctx.font='bold '+fontSize+'px Arial'; }
+        ctx.fillText(ship.ref, textX, 8+fontSize);
+
+        // Pink line
+        ctx.fillStyle='#e91e8c';
+        ctx.fillRect(textX, 50, availW, 2);
+
+        // Customer
+        ctx.fillStyle='#222222';
+        ctx.font='bold 16px Arial';
+        const cust=ship.customer||'';
+        ctx.fillText(cust.length>20?cust.slice(0,20)+'…':cust, textX, 70);
+
+        // Design info
+        ctx.fillStyle='#555555';
+        ctx.font='14px Arial';
+        const info=design+(ship.shirts?' · '+ship.shirts+' shirts':'');
+        const words=info.split(' ');
+        let line1='',line2='',onLine2=false;
+        for(const w of words){
+          if(!onLine2){ const t=line1+w+' '; if(ctx.measureText(t).width>availW){onLine2=true;line2=w+' ';}else{line1=t;} }
+          else{line2+=w+' ';}
+        }
+        ctx.fillText(line1.trim(), textX, 90);
+        if(line2.trim()) ctx.fillText(line2.trim(), textX, 108);
+
+        // Scan note
+        ctx.fillStyle='#aaaaaa';
+        ctx.font='11px Arial';
+        ctx.fillText('Scan to update status', textX, H-6);
+
+        document.body.removeChild(tempDiv);
+        resolve(canvas.toDataURL('image/png'));
+      }, 350);
+    });
+  }
+
+  // Generate all labels
+  const sorted = [...allShipments].sort((a,b)=>{
+    return (parseInt((a.ref||'').replace(/\D/g,''))||0) - (parseInt((b.ref||'').replace(/\D/g,''))||0);
+  });
+
+  const labelImages = [];
+  for(const ship of sorted){
+    const img = await makeLabel(ship);
+    labelImages.push({ ref: ship.ref, img });
+  }
+
+  // Open print window with all labels
+  const printWin = window.open('','_blank');
+  const labelsHtml = labelImages.map(l=>`
+    <div class="label-wrap">
+      <img src="${l.img}" width="457" height="254">
+    </div>
+  `).join('');
+
+  printWin.document.write(`<!DOCTYPE html>
+<html>
+<head>
+<title>All QR Labels</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  @page{size:2.25in 1.25in;margin:0}
+  body{background:#f0f0f0;font-family:Arial,sans-serif}
+  .header{background:#e91e8c;color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+  .header h2{font-size:18px}
+  .print-btn{background:#fff;color:#e91e8c;border:none;padding:8px 20px;border-radius:6px;font-size:15px;font-weight:700;cursor:pointer}
+  .grid{display:flex;flex-wrap:wrap;gap:12px;padding:20px;justify-content:flex-start}
+  .label-wrap{background:#fff;border:1px solid #ccc;border-radius:4px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+  .label-wrap img{display:block;width:228px;height:127px}
+  @media print{
+    @page{size:2.25in 1.25in;margin:0}
+    body{background:#fff}
+    .header{display:none}
+    .grid{display:block;padding:0;gap:0}
+    .label-wrap{border:none;box-shadow:none;page-break-after:always;width:2.25in;height:1.25in;overflow:hidden}
+    .label-wrap img{width:2.25in;height:1.25in}
+  }
+</style>
+</head>
+<body>
+<div class="header">
+  <h2>📱 All QR Labels — ${sorted.length} SOs</h2>
+  <button class="print-btn" onclick="window.print()">🖨 Print All (${sorted.length} labels)</button>
+</div>
+<div class="grid">${labelsHtml}</div>
+</body>
+</html>`);
+  printWin.document.close();
 }
 
 // ═══════ QR CODE ═══════

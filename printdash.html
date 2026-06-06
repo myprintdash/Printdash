@@ -1726,7 +1726,7 @@ async function saveOrder(){
   const shipmentId=v('mo-ship'),qty=parseInt(v('mo-qty'))||0;
   if(!shipmentId||!qty){toast('Select a shipment and enter quantity.','err');return;}
   try{
-    await db.collection('orders').add({shipmentId,qty,status:v('mo-status'),sparesUsed:parseInt(v('mo-spares'))||0,defects:parseInt(v('mo-defects'))||0,notes:v('mo-notes'),createdBy:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    await db.collection('orders').add({shipmentId:shipmentId,qty:qty,status:v('mo-status'),sparesUsed:parseInt(v('mo-spares'))||0,defects:parseInt(v('mo-defects'))||0,notes:v('mo-notes'),createdBy:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     const s=allShipments.find(x=>x.id===shipmentId);
     await logAct(`Created order for ${s?.customer||'?'} qty:${qty}`);
     toast('Order saved!','ok');closeModal('order');

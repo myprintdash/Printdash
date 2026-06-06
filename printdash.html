@@ -2776,11 +2776,17 @@ function printQRLabel(){
     const textW = W - textX - 8;
     let textY = 20;
 
-    // SO number - large bold
+    // SO number - auto-fit font size
     ctx.fillStyle = '#000000';
-    ctx.font = 'bold 36px Arial';
-    ctx.fillText(ship.ref, textX, textY + 36);
-    textY += 50;
+    const availW = W - textX - 6;
+    let fontSize = 34;
+    ctx.font = 'bold ' + fontSize + 'px Arial';
+    while(ctx.measureText(ship.ref).width > availW && fontSize > 18){
+      fontSize -= 1;
+      ctx.font = 'bold ' + fontSize + 'px Arial';
+    }
+    ctx.fillText(ship.ref, textX, textY + fontSize);
+    textY += fontSize + 14;
 
     // Pink line
     ctx.fillStyle = '#e91e8c';

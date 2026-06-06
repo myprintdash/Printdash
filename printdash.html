@@ -202,7 +202,7 @@ tbody tr:hover td{background:var(--surface2)}
   body.printing-label #qr-label{display:block!important}
   body.printing-label > *:not(#qr-label){display:none!important}
   body.printing-label #qr-label{position:fixed;top:0;left:0}
-  @page{size:1.25in 2.0in;margin:0;}
+  @page{size:2.25in 1.25in;margin:0;}
   body.printing-label{margin:0;padding:0}
 
   body.printing-jobsheet #job-sheet{display:block!important}
@@ -745,7 +745,7 @@ tbody tr:hover td{background:var(--surface2)}
 
       <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
         <button class="btn btn-pink" onclick="printJobSheet()" style="padding:12px 24px;font-size:15px">🖨 Print Job Sheet</button>
-        <button class="btn" onclick="printQRLabel()" style="padding:12px 24px;font-size:15px;background:var(--teal2);color:var(--teal);border-color:var(--teal)">🏷 Print Label (1.25×2")</button>
+        <button class="btn" onclick="printQRLabel()" style="padding:12px 24px;font-size:15px;background:var(--teal2);color:var(--teal);border-color:var(--teal)">🏷 Print Label (2.25×1.25")</button>
         <button class="btn" onclick="downloadQR()" style="padding:12px 24px;font-size:15px">⬇ Download QR</button>
       </div>
     </div>
@@ -755,28 +755,27 @@ tbody tr:hover td{background:var(--surface2)}
 <!-- PRINT QR LABEL 1.25x2 inch -->
 <div id="qr-label" style="display:none">
   <div id="qr-label-inner" style="
-    width:1.25in;
-    height:2.0in;
+    width:2.25in;
+    height:1.25in;
     padding:0.05in;
     box-sizing:border-box;
     font-family:Arial,sans-serif;
     display:flex;
-    flex-direction:column;
+    flex-direction:row;
     align-items:center;
-    justify-content:space-between;
+    gap:0.06in;
     border:1px solid #000;
     overflow:hidden;
     background:#fff;
   ">
-    <!-- SO ref at top -->
-    <div id="ql-ref" style="font-size:10pt;font-weight:900;letter-spacing:1px;text-align:center;line-height:1.1;color:#e91e8c;width:100%"></div>
-    <!-- QR in middle -->
-    <div id="ql-qr" style="display:flex;align-items:center;justify-content:center"></div>
-    <!-- Customer + info at bottom -->
-    <div style="text-align:center;width:100%">
-      <div id="ql-customer" style="font-size:7pt;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:1.15in;color:#000"></div>
-      <div id="ql-info" style="font-size:6pt;color:#555;overflow:hidden;max-width:1.15in;line-height:1.3"></div>
-      <div style="font-size:5pt;color:#999;margin-top:2pt">Scan to update status</div>
+    <!-- QR on left -->
+    <div id="ql-qr" style="flex-shrink:0;display:flex;align-items:center;justify-content:center"></div>
+    <!-- Text on right -->
+    <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:3pt">
+      <div id="ql-ref" style="font-size:12pt;font-weight:900;letter-spacing:1px;line-height:1;color:#e91e8c;white-space:nowrap"></div>
+      <div id="ql-customer" style="font-size:7pt;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+      <div id="ql-info" style="font-size:6pt;color:#555;line-height:1.3;overflow:hidden"></div>
+      <div style="font-size:5pt;color:#999">Scan to update status</div>
     </div>
   </div>
 </div>
@@ -2750,8 +2749,8 @@ function printQRLabel(){
   const appUrl = window.location.href.split('?')[0] + '?so=' + ship.id;
   new QRCode(qlQR, {
     text: appUrl,
-    width: 105,
-    height: 105,
+    width: 95,
+    height: 95,
     colorDark: '#000000',
     colorLight: '#ffffff',
     correctLevel: QRCode.CorrectLevel.M

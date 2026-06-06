@@ -2687,10 +2687,12 @@ async function printAllLabels(){
         ctx.fillStyle='#ffffff';
         ctx.fillRect(0,0,W,H);
 
-        const qrSize=180, qrX=8, qrY=(H-qrSize)/2;
-        if(qrCanvas) ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
+    
 
-        const textX=qrX+qrSize+10, availW=W-textX-6;
+        const qrSz=140, qrXp=6, qrYp=(H-qrSz)/2;
+        if(qrCanvas) ctx.drawImage(qrCanvas, qrXp, qrYp, qrSz, qrSz);
+
+        const textX=qrXp+qrSz+10, availW=W-textX-6;
 
         // SO number
         ctx.fillStyle='#000000';
@@ -2703,15 +2705,15 @@ async function printAllLabels(){
         ctx.fillStyle='#e91e8c';
         ctx.fillRect(textX, 50, availW, 2);
 
-        // Customer
-        ctx.fillStyle='#222222';
-        ctx.font='bold 16px Arial';
+        // Customer - bigger
+        ctx.fillStyle='#111111';
+        ctx.font='bold 22px Arial';
         const cust=ship.customer||'';
-        ctx.fillText(cust.length>20?cust.slice(0,20)+'…':cust, textX, 70);
+        ctx.fillText(cust.length>20?cust.slice(0,20)+'…':cust, textX, 76);
 
-        // Design info
-        ctx.fillStyle='#555555';
-        ctx.font='14px Arial';
+        // Design - bigger bold
+        ctx.fillStyle='#333333';
+        ctx.font='bold 18px Arial';
         const info=design+(ship.shirts?' · '+ship.shirts+' shirts':'');
         const words=info.split(' ');
         let line1='',line2='',onLine2=false;
@@ -2719,8 +2721,8 @@ async function printAllLabels(){
           if(!onLine2){ const t=line1+w+' '; if(ctx.measureText(t).width>availW){onLine2=true;line2=w+' ';}else{line1=t;} }
           else{line2+=w+' ';}
         }
-        ctx.fillText(line1.trim(), textX, 90);
-        if(line2.trim()) ctx.fillText(line2.trim(), textX, 108);
+        ctx.fillText(line1.trim(), textX, 100);
+        if(line2.trim()) ctx.fillText(line2.trim(), textX, 122);
 
         // Scan note
         ctx.fillStyle='#aaaaaa';
@@ -2897,9 +2899,9 @@ function printQRLabel(){
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, W, H);
 
-    // QR on left, vertically centered
-    const qrSize = 180;
-    const qrX = 8;
+    // QR on left, vertically centered - smaller
+    const qrSize = 140;
+    const qrX = 6;
     const qrY = (H - qrSize) / 2;
     if(qrCanvas) ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
 

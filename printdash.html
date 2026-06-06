@@ -2768,54 +2768,56 @@ function printQRLabel(){
     const qrY = (H - qrSize) / 2;
     if(qrCanvas) ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
 
-    // Text on right
+    // Text on right - fixed positions to avoid overlap
     const textX = qrX + qrSize + 10;
     const availW = W - textX - 6;
-    let textY = 22;
 
-    // SO number - auto fit
+    // SO number at top - auto fit font
     ctx.fillStyle = '#000000';
-    let fontSize = 34;
+    let fontSize = 30;
     ctx.font = 'bold ' + fontSize + 'px Arial';
-    while(ctx.measureText(ship.ref).width > availW && fontSize > 18){
+    while(ctx.measureText(ship.ref).width > availW && fontSize > 14){
       fontSize--;
       ctx.font = 'bold ' + fontSize + 'px Arial';
     }
-    ctx.fillText(ship.ref, textX, textY + fontSize);
-    textY += fontSize + 14;
+    ctx.fillText(ship.ref, textX, 38);
 
     // Pink line
     ctx.fillStyle = '#e91e8c';
-    ctx.fillRect(textX, textY, availW, 3);
-    textY += 12;
+    ctx.fillRect(textX, 48, availW, 2);
 
-    // Customer
+    // Customer at fixed Y
     ctx.fillStyle = '#222222';
-    ctx.font = 'bold 18px Arial';
+    ctx.font = 'bold 16px Arial';
     const cust = (ship.customer||'');
-    ctx.fillText(cust.length>18 ? cust.slice(0,18)+'…' : cust, textX, textY + 18);
-    textY += 26;
+    ctx.fillText(cust.length>20 ? cust.slice(0,20)+'…' : cust, textX, 72);
 
-    // Design info
+    // Design line 1
     ctx.fillStyle = '#555555';
-    ctx.font = '15px Arial';
+    ctx.font = '14px Arial';
     const info = design + (ship.shirts ? ' · ' + ship.shirts + ' shirts' : '');
+    // Split into max 2 lines
     const words = info.split(' ');
-    let line = '';
+    let line1 = '', line2 = '';
+    let onLine2 = false;
     for(let w of words){
-      const test = line + w + ' ';
-      if(ctx.measureText(test).width > availW && line){
-        ctx.fillText(line.trim(), textX, textY);
-        textY += 18;
-        line = w + ' ';
-      } else { line = test; }
+      if(!onLine2){
+        const test = line1 + w + ' ';
+        if(ctx.measureText(test).width > availW){
+          onLine2 = true;
+          line2 = w + ' ';
+        } else { line1 = test; }
+      } else {
+        line2 += w + ' ';
+      }
     }
-    if(line.trim()) ctx.fillText(line.trim(), textX, textY);
+    ctx.fillText(line1.trim(), textX, 95);
+    if(line2.trim()) ctx.fillText(line2.trim().slice(0,28), textX, 113);
 
-    // Scan note at bottom
-    ctx.fillStyle = '#999999';
-    ctx.font = '12px Arial';
-    ctx.fillText('Scan to update status', textX, H - 8);
+    // Scan note fixed at bottom
+    ctx.fillStyle = '#aaaaaa';
+    ctx.font = '11px Arial';
+    ctx.fillText('Scan to update status', textX, H - 6);
 
     document.body.removeChild(tempDiv);
 

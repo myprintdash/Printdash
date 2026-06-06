@@ -2737,65 +2737,95 @@ function printQRLabel(){
   const appUrl = window.location.href.split('?')[0] + '?so=' + ship.id;
   const design = (ship.design||'').replace('2-Side Print — ','2S: ').replace('1-Side Print — ','1S: ');
 
-  // Generate QR in temp div
+  // Generate QR on canvas
   const tempDiv = document.createElement('div');
   tempDiv.style.cssText = 'position:fixed;left:-9999px;top:-9999px';
   document.body.appendChild(tempDiv);
   new QRCode(tempDiv, {
-    text: appUrl, width:216, height:216,
+    text: appUrl, width:200, height:200,
     colorDark:'#000000', colorLight:'#ffffff',
     correctLevel: QRCode.CorrectLevel.M
   });
 
   setTimeout(()=>{
-    const canvas = tempDiv.querySelector('canvas');
-    const qrDataUrl = canvas ? canvas.toDataURL('image/png') : '';
+    const qrCanvas = tempDiv.querySelector('canvas');
+
+    // Create label canvas: 2.25" x 1.25" at 203 DPI (Jadens native DPI)
+    // 2.25 * 203 = 457px wide, 1.25 * 203 = 254px tall
+    const DPI = 203;
+    const W = Math.round(2.25 * DPI); // 457
+    const H = Math.round(1.25 * DPI); // 254
+
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    // White background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    // Draw QR on left
+    const qrSize = H - 20; // 234px
+    const qrX = 10;
+    const qrY = 10;
+    if(qrCanvas) ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
+
+    // Draw text on right
+    const textX = qrX + qrSize + 12;
+    const textW = W - textX - 8;
+    let textY = 20;
+
+    // SO number - large bold
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold 36px Arial';
+    ctx.fillText(ship.ref, textX, textY + 36);
+    textY += 50;
+
+    // Pink line
+    ctx.fillStyle = '#e91e8c';
+    ctx.fillRect(textX, textY, textW, 3);
+    textY += 12;
+
+    // Customer
+    ctx.fillStyle = '#222222';
+    ctx.font = 'bold 18px Arial';
+    const custText = ship.customer||'';
+    ctx.fillText(custText.length>16?custText.slice(0,16)+'…':custText, textX, textY + 18);
+    textY += 26;
+
+    // Design info
+    ctx.fillStyle = '#555555';
+    ctx.font = '15px Arial';
+    const infoText = design + (ship.shirts?' · '+ship.shirts+' shirts':'');
+    // Word wrap
+    const words = infoText.split(' ');
+    let line = '';
+    for(let w of words){
+      const test = line + w + ' ';
+      if(ctx.measureText(test).width > textW && line){
+        ctx.fillText(line.trim(), textX, textY);
+        textY += 18;
+        line = w + ' ';
+      } else { line = test; }
+    }
+    if(line.trim()) ctx.fillText(line.trim(), textX, textY);
+    textY += 22;
+
+    // Scan note
+    ctx.fillStyle = '#999999';
+    ctx.font = '12px Arial';
+    ctx.fillText('Scan to update status', textX, H - 10);
+
     document.body.removeChild(tempDiv);
 
-    // Build label HTML
-    const html = `<!DOCTYPE html><html><head><style>
-      *{margin:0;padding:0;box-sizing:border-box}
-      @page{size:2.25in 1.25in;margin:0}
-      html,body{width:2.25in;height:1.25in;overflow:hidden;background:#fff;font-family:Arial,sans-serif}
-      .label{width:2.25in;height:1.25in;display:flex;flex-direction:row;align-items:center;padding:3pt 4pt;gap:5pt}
-      .qr img{width:82pt;height:82pt;display:block}
-      .info{flex:1;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:2pt}
-      .ref{font-size:13pt;font-weight:900;color:#000;white-space:nowrap;line-height:1}
-      .line{height:1.5pt;background:#e91e8c;margin:1pt 0}
-      .cust{font-size:7pt;font-weight:700;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      .des{font-size:6pt;color:#444;line-height:1.3}
-      .scan{font-size:5pt;color:#999;margin-top:1pt}
-    </style></head><body>
-    <div class="label">
-      <div class="qr"><img src="${qrDataUrl}"></div>
-      <div class="info">
-        <div class="ref">${ship.ref}</div>
-        <div class="line"></div>
-        <div class="cust">${ship.customer||''}</div>
-        <div class="des">${design}${ship.shirts?' · '+ship.shirts+' shirts':''}</div>
-        <div class="scan">Scan to update print status</div>
-      </div>
-    </div>
-    </body></html>`;
+    // Download as PNG
+    const link = document.createElement('a');
+    link.download = ship.ref + '_label.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
 
-    // Use hidden iframe - no popup blocker issues
-    let iframe = document.getElementById('print-iframe');
-    if(!iframe){
-      iframe = document.createElement('iframe');
-      iframe.id = 'print-iframe';
-      iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:2.25in;height:1.25in;border:none';
-      document.body.appendChild(iframe);
-    }
-    iframe.onload = function(){
-      setTimeout(()=>{
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-      }, 300);
-    };
-    const doc = iframe.contentDocument || iframe.contentWindow.document;
-    doc.open();
-    doc.write(html);
-    doc.close();
+    toast('Label image downloaded! Open it and print at actual size (2.25×1.25").', 'ok');
   }, 400);
 }
 

@@ -424,7 +424,7 @@ tbody tr:hover td{background:var(--surface2)}
         </div>
       </div>
       <div class="card" style="padding:0"><div class="table-wrap"><table>
-        <thead><tr><th>Ref</th><th>Customer</th><th>Date</th><th>Shirts In</th><th>Spares In</th><th>Spares Left</th><th>Design</th><th>Status</th><th class="no-print"></th></tr></thead>
+        <thead><tr><th>Ref</th><th>Customer</th><th>Date</th><th>Shirts In</th><th>Spares In</th><th>Spares Left</th><th>Design</th><th>Defects</th><th>Status</th><th class="no-print"></th></tr></thead>
         <tbody id="ship-tbody"></tbody>
       </table></div></div>
     </div>
@@ -574,6 +574,64 @@ tbody tr:hover td{background:var(--surface2)}
       </div>
     </div>
     <div class="modal-footer"><button class="btn btn-pink" style="padding:10px 24px" onclick="closeModal('designs')">Done</button></div>
+  </div>
+</div>
+
+
+<!-- MODAL: DEFECTS -->
+<div class="overlay" id="modal-defects">
+  <div class="modal" style="width:min(600px,100%)">
+    <div class="modal-header">
+      <div class="modal-title">⚠ Record Defects</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('defects')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="def-shipid">
+      <div id="def-ship-info" style="background:var(--surface2);border-radius:var(--radius);padding:10px 14px;font-size:14px;margin-bottom:1.25rem;color:var(--ink2)"></div>
+
+      <!-- INSPECTION IN -->
+      <div style="background:var(--yellow-bg);border:1.5px solid #f0d060;border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-bottom:1rem">
+        <div style="font-size:14px;font-weight:700;color:var(--yellow);margin-bottom:.75rem">📦 Inspection In — Defects found on arrival</div>
+        <div class="form-row" style="margin-bottom:10px">
+          <div class="fgrp">
+            <label style="font-size:13px">Defective Shirts</label>
+            <input type="number" id="def-in-qty" min="0" value="0" style="font-size:20px;padding:12px;font-weight:600">
+          </div>
+          <div class="fgrp">
+            <label style="font-size:13px">Spare Used to Replace</label>
+            <input type="number" id="def-in-spare" min="0" value="0" style="font-size:20px;padding:12px;font-weight:600">
+          </div>
+        </div>
+        <div class="fgrp" style="margin-bottom:0">
+          <label style="font-size:13px">Color / Description</label>
+          <input type="text" id="def-in-desc" placeholder="e.g. 2 Black M - holes, 1 White L - stain" style="font-size:14px;padding:10px 12px">
+        </div>
+      </div>
+
+      <!-- AFTER PRINT -->
+      <div style="background:var(--red-bg);border:1.5px solid #f5c0c0;border-radius:var(--radius-lg);padding:1rem 1.25rem">
+        <div style="font-size:14px;font-weight:700;color:var(--red);margin-bottom:.75rem">🖨 After Print — Defects found after printing</div>
+        <div class="form-row" style="margin-bottom:10px">
+          <div class="fgrp">
+            <label style="font-size:13px">Defective Shirts</label>
+            <input type="number" id="def-print-qty" min="0" value="0" style="font-size:20px;padding:12px;font-weight:600">
+          </div>
+          <div class="fgrp">
+            <label style="font-size:13px">Spare Used to Replace</label>
+            <input type="number" id="def-print-spare" min="0" value="0" style="font-size:20px;padding:12px;font-weight:600">
+          </div>
+        </div>
+        <div class="fgrp" style="margin-bottom:0">
+          <label style="font-size:13px">Color / Description</label>
+          <input type="text" id="def-print-desc" placeholder="e.g. 1 Navy XL - misprint, 2 Red M - ink smear" style="font-size:14px;padding:10px 12px">
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('defects')">Cancel</button>
+      <button class="btn btn-pink" style="padding:12px 28px;font-size:16px" onclick="saveDefects()">Save Defects</button>
+    </div>
   </div>
 </div>
 
@@ -1159,7 +1217,7 @@ async function loadDashboard(){
   const tsp=allShipments.reduce((a,s)=>a+(s.spares||0),0);
   const usp=allOrders.reduce((a,o)=>a+(o.sparesUsed||0),0);
   const done=allOrders.filter(o=>o.status==='completed'||o.status==='spare_used').length;
-  const def=allOrders.reduce((a,o)=>a+(o.defects||0),0);
+  const def=allShipments.reduce((a,s)=>a+(s.totalDefects||0),0);
   document.getElementById('dash-metrics').innerHTML=`
     <div class="metric"><div class="metric-label">Shirts on Rack</div><div class="metric-value">${totalRack}</div><div class="metric-sub">${rack} in production · ${shirtRack} spare stock</div></div>
     <div class="metric m-pink"><div class="metric-label">Total Shipments</div><div class="metric-value">${allShipments.length}</div><div class="metric-sub">${allShipments.reduce((a,s)=>a+(s.shirts||0),0)} shirts total</div></div>
@@ -1208,9 +1266,11 @@ function renderShipments(){
       <td>${s.shirts}</td><td>${s.spares}</td>
       <td><span style="color:${left<=1?'var(--red)':left<=3?'var(--yellow)':'var(--teal)'};font-weight:600">${left}</span></td>
       <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink3);font-size:12px">${s.design||'—'}</td>
+      <td>${(s.defectIn||0)+(s.defectPrint||0)>0?`<span style="color:var(--red);font-weight:700">⚠ ${(s.defectIn||0)+(s.defectPrint||0)}</span>`:'<span style="color:var(--ink4)">—</span>'}</td>
       <td>${badge(shipSt(s))}</td>
       <td class="no-print" style="white-space:nowrap">
-        <button class="btn btn-sm btn-ghost" onclick="openShipShirts('${s.id}')">👕 Shirts</button> <button class="btn btn-sm btn-ghost" onclick="editShipment('${s.id}')">Edit</button>
+        <button class="btn btn-sm" onclick="openDefectModal('${s.id}')" style="background:var(--yellow-bg);color:var(--yellow);border-color:var(--yellow)">⚠ Defects</button>
+        <button class="btn btn-sm btn-ghost" onclick="editShipment('${s.id}')">Edit</button>
         ${isAdmin?`<button class="btn btn-sm btn-danger" onclick="deleteShipment('${s.id}')">Del</button>`:''}
       </td></tr>`;
   }).join('')||`<tr class="empty-row"><td colspan="9">No shipments found</td></tr>`;
@@ -2205,6 +2265,83 @@ function getEditBreakdown(tbodyId){
     breakdown.push(entry);
   });
   return breakdown;
+}
+
+
+// ═══════ DEFECTS ═══════
+async function openDefectModal(shipId){
+  const ship = allShipments.find(s=>s.id===shipId);
+  if(!ship) return;
+  sv('def-shipid', shipId);
+  document.getElementById('def-ship-info').innerHTML =
+    `<strong>${ship.customer}</strong> · <span style="color:var(--pink);font-weight:700">${ship.ref}</span> · ${ship.shirts} shirts · ${ship.date||''}`;
+
+  // Load existing defects
+  try{
+    const snap = await db.collection('defects').where('shipmentId','==',shipId).get();
+    const existing = snap.docs.map(d=>({id:d.id,...d.data()}));
+    const insp = existing.find(d=>d.type==='inspection');
+    const prnt = existing.find(d=>d.type==='print');
+    sv('def-in-qty', insp?insp.qty:0);
+    sv('def-in-spare', insp?insp.spareUsed:0);
+    sv('def-in-desc', insp?insp.description:'');
+    sv('def-print-qty', prnt?prnt.qty:0);
+    sv('def-print-spare', prnt?prnt.spareUsed:0);
+    sv('def-print-desc', prnt?prnt.description:'');
+  }catch(e){
+    sv('def-in-qty',0);sv('def-in-spare',0);sv('def-in-desc','');
+    sv('def-print-qty',0);sv('def-print-spare',0);sv('def-print-desc','');
+  }
+  const m=document.getElementById('modal-defects');
+  if(m){m.style.display='flex';m.classList.add('open');}
+}
+
+async function saveDefects(){
+  const shipId = v('def-shipid');
+  const inQty = parseInt(v('def-in-qty'))||0;
+  const inSpare = parseInt(v('def-in-spare'))||0;
+  const inDesc = v('def-in-desc');
+  const printQty = parseInt(v('def-print-qty'))||0;
+  const printSpare = parseInt(v('def-print-spare'))||0;
+  const printDesc = v('def-print-desc');
+
+  try{
+    // Delete existing defects for this shipment
+    const snap = await db.collection('defects').where('shipmentId','==',shipId).get();
+    await Promise.all(snap.docs.map(d=>d.ref.delete()));
+
+    // Save inspection defect
+    if(inQty>0||inDesc){
+      await db.collection('defects').add({
+        shipmentId, type:'inspection', qty:inQty, spareUsed:inSpare,
+        description:inDesc, createdBy:currentUser.uid,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+    // Save print defect
+    if(printQty>0||printDesc){
+      await db.collection('defects').add({
+        shipmentId, type:'print', qty:printQty, spareUsed:printSpare,
+        description:printDesc, createdBy:currentUser.uid,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    // Update shipment totals
+    const totalDefects = inQty + printQty;
+    const totalSpareUsed = inSpare + printSpare;
+    await db.collection('shipments').doc(shipId).update({
+      defectIn: inQty, defectInSpare: inSpare, defectInDesc: inDesc,
+      defectPrint: printQty, defectPrintSpare: printSpare, defectPrintDesc: printDesc,
+      totalDefects, totalSpareUsed
+    });
+
+    await logAct(`Recorded defects for ${allShipments.find(s=>s.id===shipId)?.ref||shipId}: ${totalDefects} total`);
+    toast(`Defects saved! ${inQty} on arrival + ${printQty} after print`, 'ok');
+    closeModal('defects');
+    await loadShipments();
+    await loadDashboard();
+  }catch(e){ toast('Error: '+e.message,'err'); }
 }
 
 // ═══════ CUSTOMER PRESETS ═══════

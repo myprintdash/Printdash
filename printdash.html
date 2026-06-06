@@ -2311,7 +2311,23 @@ function addDefectRow(tbodyId, color='', size='', qty=0, spare=0, reason=''){
         oninput="updateDefectTotals('${tbodyId}')">
     </td>
     <td style="padding:4px;border:1px solid ${borderColor}">
-      <input type="text" value="${reason||''}" placeholder="e.g. hole, stain, misprint" style="width:100%;border:none;outline:none;font-size:13px;padding:4px;font-family:var(--font-body)">
+      <select style="width:100%;border:none;outline:none;font-size:13px;padding:5px 4px;font-family:var(--font-body);background:transparent;cursor:pointer">
+        <option value="">— Reason —</option>
+        <option value="Hole"${reason==='Hole'?' selected':''}>Hole</option>
+        <option value="Stain"${reason==='Stain'?' selected':''}>Stain</option>
+        <option value="Misprint"${reason==='Misprint'?' selected':''}>Misprint</option>
+        <option value="Ink smear"${reason==='Ink smear'?' selected':''}>Ink smear</option>
+        <option value="Ink bleed"${reason==='Ink bleed'?' selected':''}>Ink bleed</option>
+        <option value="Wrong color"${reason==='Wrong color'?' selected':''}>Wrong color</option>
+        <option value="Wrong size"${reason==='Wrong size'?' selected':''}>Wrong size</option>
+        <option value="Tear"${reason==='Tear'?' selected':''}>Tear</option>
+        <option value="Fading"${reason==='Fading'?' selected':''}>Fading</option>
+        <option value="Off-center print"${reason==='Off-center print'?' selected':''}>Off-center print</option>
+        <option value="Double print"${reason==='Double print'?' selected':''}>Double print</option>
+        <option value="Missing print"${reason==='Missing print'?' selected':''}>Missing print</option>
+        <option value="Fabric defect"${reason==='Fabric defect'?' selected':''}>Fabric defect</option>
+        <option value="Other"${reason==='Other'?' selected':''}>Other</option>
+      </select>
     </td>
     <td style="padding:4px;border:1px solid ${borderColor};text-align:center">
       <button onclick="this.closest('tr').remove();updateDefectTotals('${tbodyId}')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:2px 4px">✕</button>
@@ -2342,13 +2358,11 @@ function getDefectRows(tbodyId){
   rows.forEach(row=>{
     const selects = row.querySelectorAll('select');
     const inputs = row.querySelectorAll('input[type=number]');
-    const textInputs = row.querySelectorAll('input[type=text]');
     let color = selects[0]?selects[0].value:'';
-    if(color==='__other__') color = textInputs[0]?textInputs[0].value.trim():'';
     const size = selects[1]?selects[1].value:'';
     const qty = parseInt(inputs[0]?.value)||0;
     const spare = parseInt(inputs[1]?.value)||0;
-    const reason = textInputs[0]?textInputs[0].value.trim():'';
+    const reason = selects[2]?selects[2].value:'';
     if(color||qty>0) items.push({color,size,qty,spare,reason});
   });
   return items;

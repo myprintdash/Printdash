@@ -1694,22 +1694,32 @@ async function deleteShipment(id){
 // ═══════ ORDERS ═══════
 async function loadOrders(){await fetchAll();renderOrders();}
 function renderOrders(){
-  const q=(document.getElementById('ord-q')||{value:''}).value.toLowerCase();
-  const f=(document.getElementById('ord-f')||{value:''}).value;
-  const tbody=document.getElementById('ord-tbody');if(!tbody)return;
-  const isAdmin=(currentProfile?.role||'staff')==='admin';
-  tbody.innerHTML=allOrders.filter(o=>{const s=allShipments.find(x=>x.id===o.shipmentId);return(!f||o.status===f)&&(!q||(s?s.customer.toLowerCase().includes(q):false));}).map(o=>{
-    const s=allShipments.find(x=>x.id===o.shipmentId);
-    return`<tr>
-      <td class="mono">${o.id.slice(0,8)}</td><td class="mono">${s?s.ref:'—'}</td>
-      <td>${s?s.customer:'—'}</td><td>${o.qty}</td><td>${o.sparesUsed||0}</td><td>${o.defects||0}</td>
-      <td>${badge(o.status)}</td>
-      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink3);font-size:12px">${o.notes||'—'}</td>
-      <td class="no-print" style="white-space:nowrap">
-        <button class="btn btn-sm btn-ghost" onclick="openUpdOrder('${o.id}')">Update</button>
-        ${isAdmin?`<button class="btn btn-sm btn-danger" onclick="deleteOrder('${o.id}')">Del</button>`:''}
-      </td></tr>`;
-  }).join('')||`<tr class="empty-row"><td colspan="9">No orders found</td></tr>`;
+  var q=(document.getElementById('ord-q')||{value:''}).value.toLowerCase();
+  var f=(document.getElementById('ord-f')||{value:''}).value;
+  var tbody=document.getElementById('ord-tbody');if(!tbody)return;
+  var isAdmin=(currentProfile&&currentProfile.role==='admin');
+  var rows=allOrders.filter(function(o){
+    var s=allShipments.find(function(x){return x.id===o.shipmentId;});
+    return(!f||o.status===f)&&(!q||(s?s.customer.toLowerCase().includes(q):false));
+  }).map(function(o){
+    var s=allShipments.find(function(x){return x.id===o.shipmentId;});
+    var delBtn=isAdmin?'<button class="btn btn-sm btn-danger" onclick="deleteOrder(''+o.id+'')">Del</button>':'';
+    return '<tr>'+
+      '<td class="mono">'+o.id.slice(0,8)+'</td>'+
+      '<td class="mono">'+(s?s.ref:'—')+'</td>'+
+      '<td>'+(s?s.customer:'—')+'</td>'+
+      '<td>'+o.qty+'</td>'+
+      '<td>'+(o.sparesUsed||0)+'</td>'+
+      '<td>'+(o.defects||0)+'</td>'+
+      '<td>'+badge(o.status)+'</td>'+
+      '<td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink2);font-size:14px">'+(o.notes||'—')+'</td>'+
+      '<td class="no-print" style="white-space:nowrap">'+
+        '<button class="btn btn-sm btn-ghost" onclick="openUpdOrder(''+o.id+'')">Update</button> '+
+        delBtn+
+      '</td>'+
+    '</tr>';
+  }).join('');
+  tbody.innerHTML=rows||'<tr class="empty-row"><td colspan="9">No orders yet</td></tr>';
 }
 
 function populateShipDrop(){

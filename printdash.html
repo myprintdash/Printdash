@@ -197,6 +197,11 @@ tbody tr:hover td{background:var(--surface2)}
   thead th,tbody td{padding:8px!important}
   .topbar-right .user-meta{display:none}
   .btn-logout{font-size:11px;padding:4px 8px}
+  /* Hide less important columns on mobile */
+  .col-hide-mobile{display:none!important}
+  /* Stack action buttons on mobile */
+  .ship-actions{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}
+  .ship-actions .btn{padding:6px 10px;font-size:12px}
 }
 @media print{
   body.printing-label #qr-label{display:block!important}
@@ -362,7 +367,8 @@ tbody tr:hover td{background:var(--surface2)}
     <div class="topbar-right">
       <div class="user-chip">
         <div class="user-av" id="top-av">?</div>
-        <button onclick="openQRScanner()" class="btn btn-sm no-print" style="background:var(--teal);color:#fff;border-color:var(--teal);margin-right:8px">📷 Scan QR</button>
+        <button onclick="openQRScanner()" class="btn btn-sm no-print" style="background:var(--teal);color:#fff;border-color:var(--teal);margin-right:4px">📷 Scan QR</button>
+      <button onclick="openQuickDefect()" class="btn btn-sm no-print" style="background:var(--yellow-bg);color:var(--yellow);border-color:var(--yellow);margin-right:8px">⚠ Defect</button>
       <div class="user-meta"><div class="uname" id="top-name">—</div><div class="urole" id="top-role">—</div></div>
       </div>
       <button class="btn-logout" onclick="doLogout()">Sign out</button>
@@ -383,6 +389,7 @@ tbody tr:hover td{background:var(--surface2)}
     <button onclick="mobileNav('log')" id="mnav-log" style="display:none">📝 Activity Log</button>
     <div class="nav-divider"></div>
     <button onclick="closeMobileMenu();openQRScanner()" style="color:var(--teal);font-weight:600">📷 Scan QR</button>
+    <button onclick="closeMobileMenu();openQuickDefect()" style="color:var(--yellow);font-weight:600">⚠ Record Defect</button>
     <div class="nav-divider"></div>
     <button onclick="doLogout()" style="color:rgba(255,100,100,.8)">🚪 Sign Out</button>
   </div>
@@ -902,6 +909,23 @@ tbody tr:hover td{background:var(--surface2)}
   </div>
 </div>
 
+
+<!-- MODAL: QUICK DEFECT (mobile) -->
+<div class="overlay" id="modal-quick-defect">
+  <div class="modal" style="width:min(480px,100%)">
+    <div class="modal-header">
+      <div class="modal-title">⚠ Quick Defect Entry</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('quick-defect')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:14px;color:var(--ink3);margin-bottom:1rem">Select the SO to record a defect for:</div>
+      <input type="text" id="qd-search" placeholder="Search SO number or customer…" 
+        style="width:100%;font-size:15px;padding:10px 12px;margin-bottom:10px"
+        oninput="filterQuickDefectList()">
+      <div id="qd-list" style="max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius)"></div>
+    </div>
+  </div>
+</div>
 <div id="toast"></div>
 
 <!-- MODAL: NEW SHIPMENT -->
@@ -2686,6 +2710,59 @@ function openQRFromDetail(){
 }
 
 
+
+
+// ═══════ QUICK DEFECT (MOBILE) ═══════
+function openQuickDefect(){
+  // Populate list sorted by SO number
+  renderQuickDefectList();
+  const m = document.getElementById('modal-quick-defect');
+  if(m){ m.style.display='flex'; m.classList.add('open'); }
+  const inp = document.getElementById('qd-search');
+  if(inp){ inp.value=''; }
+}
+
+function renderQuickDefectList(filter=''){
+  const container = document.getElementById('qd-list');
+  if(!container) return;
+  const sorted = [...allShipments].sort((a,b)=>{
+    return (parseInt((a.ref||'').replace(/[^0-9]/g,''))||0) - (parseInt((b.ref||'').replace(/[^0-9]/g,''))||0);
+  });
+  const filtered = filter ? sorted.filter(s=>
+    (s.ref||'').toLowerCase().includes(filter.toLowerCase()) ||
+    (s.customer||'').toLowerCase().includes(filter.toLowerCase())
+  ) : sorted;
+
+  if(!filtered.length){
+    container.innerHTML='<div style="padding:1rem;text-align:center;color:var(--ink3);font-style:italic">No shipments found</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(s=>{
+    const defTotal = (s.defectIn||0)+(s.defectPrint||0);
+    return `<div onclick="selectQuickDefect('${s.id}')"
+      style="padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px"
+      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:var(--pink)">${s.ref}</div>
+        <div style="font-size:13px;color:var(--ink3)">${s.customer} · ${s.shirts} shirts · ${s.date||''}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        ${defTotal>0?`<span style="color:var(--red);font-weight:700;font-size:13px">⚠ ${defTotal} defects</span>`:'<span style="color:var(--teal);font-size:13px">✅ No defects</span>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterQuickDefectList(){
+  const q = document.getElementById('qd-search')?.value||'';
+  renderQuickDefectList(q);
+}
+
+function selectQuickDefect(shipId){
+  closeModal('quick-defect');
+  setTimeout(()=>openDefectModal(shipId), 200);
+}
 
 // ═══════ QR SCANNER ═══════
 let qrScanStream = null;

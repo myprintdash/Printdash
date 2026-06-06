@@ -766,6 +766,75 @@ tbody tr:hover td{background:var(--surface2)}
   </div>
 </div>
 
+
+<!-- MODAL: SO DETAIL -->
+<div class="overlay" id="modal-so-detail">
+  <div class="modal" style="width:min(780px,100%);max-height:95vh">
+    <div class="modal-header" style="background:var(--ink);border-radius:var(--radius-xl) var(--radius-xl) 0 0">
+      <div>
+        <div id="sod-ref" style="font-family:var(--font-display);font-size:26px;color:#fff"></div>
+        <div id="sod-sub" style="font-size:13px;color:rgba(255,255,255,.5);margin-top:2px"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="sod-print-btn" class="btn btn-sm" onclick="openPrintStatusFromDetail()" style="background:var(--teal);color:#fff;border-color:var(--teal)">🖨 Print Status</button>
+        <button id="sod-defect-btn" class="btn btn-sm" onclick="openDefectFromDetail()" style="background:var(--yellow-bg);color:var(--yellow);border-color:var(--yellow)">⚠ Defects</button>
+        <button id="sod-qr-btn" class="btn btn-sm" onclick="openQRFromDetail()" style="background:#f0f0ff;color:#5b5bd6;border-color:#c4c4f8">📱 QR</button>
+        <button class="btn btn-ghost btn-sm" onclick="closeModal('so-detail')" style="color:rgba(255,255,255,.7)">✕</button>
+      </div>
+    </div>
+    <div class="modal-body" style="overflow-y:auto;max-height:calc(95vh - 80px);padding:0">
+
+      <!-- SUMMARY BAR -->
+      <div id="sod-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0;border-bottom:1px solid var(--border)"></div>
+
+      <div style="padding:1.5rem">
+
+        <!-- INFO ROW -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem">
+          <div class="card" style="margin:0;padding:1rem">
+            <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">Shipment Info</div>
+            <table style="font-size:14px;width:100%;border:none">
+              <tr><td style="padding:4px 0;color:var(--ink3);border:none;width:100px">Customer</td><td style="padding:4px 0;border:none;font-weight:600" id="sod-customer"></td></tr>
+              <tr><td style="padding:4px 0;color:var(--ink3);border:none">Date</td><td style="padding:4px 0;border:none" id="sod-date"></td></tr>
+              <tr><td style="padding:4px 0;color:var(--ink3);border:none">Design</td><td style="padding:4px 0;border:none" id="sod-design"></td></tr>
+              <tr><td style="padding:4px 0;color:var(--ink3);border:none">Print</td><td style="padding:4px 0;border:none" id="sod-sides"></td></tr>
+              <tr><td style="padding:4px 0;color:var(--ink3);border:none">Status</td><td style="padding:4px 0;border:none" id="sod-status"></td></tr>
+            </table>
+          </div>
+          <div class="card" style="margin:0;padding:1rem">
+            <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">Shirt Count</div>
+            <table style="font-size:14px;width:100%;border:none">
+              <tr><td style="padding:4px 0;color:var(--ink3);border:none;width:100px">Total Shirts</td><td style="padding:4px 0;border:none;font-size:22px;font-weight:700;color:var(--pink)" id="sod-total"></td></tr>
+              <tr><td style="padding:4px 0;color:var(--ink3);border:none">Spares In</td><td style="padding:4px 0;border:none;font-weight:600" id="sod-spares"></td></tr>
+              <tr><td style="padding:4px 0;color:var(--ink3);border:none">Defects In</td><td style="padding:4px 0;border:none" id="sod-def-in"></td></tr>
+              <tr><td style="padding:4px 0;color:var(--ink3);border:none">Defects Print</td><td style="padding:4px 0;border:none" id="sod-def-print"></td></tr>
+              <tr><td style="padding:4px 0;color:var(--ink3);border:none">Notes</td><td style="padding:4px 0;border:none;font-size:13px;color:var(--ink3)" id="sod-notes"></td></tr>
+            </table>
+          </div>
+        </div>
+
+        <!-- SHIRT BREAKDOWN -->
+        <div style="margin-bottom:1.5rem">
+          <div style="font-size:13px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">👕 Shirt Colors & Sizes</div>
+          <div id="sod-breakdown" style="border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden"></div>
+        </div>
+
+        <!-- SPARE BREAKDOWN -->
+        <div id="sod-spare-section" style="margin-bottom:1.5rem;display:none">
+          <div style="font-size:13px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">🔁 Spare Shirts</div>
+          <div id="sod-spare-breakdown" style="border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden"></div>
+        </div>
+
+        <!-- DEFECTS SECTION -->
+        <div id="sod-defects-section" style="display:none">
+          <div style="font-size:13px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">⚠ Defects Recorded</div>
+          <div id="sod-defects-content"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
 <div id="toast"></div>
 
 <!-- MODAL: NEW SHIPMENT -->
@@ -1398,7 +1467,7 @@ function renderShipments(){
   tbody.innerHTML=allShipments.filter(s=>s.customer.toLowerCase().includes(q)||s.ref.toLowerCase().includes(q)).map(s=>{
     const used=sparesUsed(s.id),left=(s.spares||0)-used;
     return`<tr>
-      <td class="mono" style="font-size:16px;font-weight:700;color:var(--pink)">${s.ref}</td><td style="font-size:16px"><strong>${s.customer}</strong></td><td>${s.date||'—'}</td>
+      <td class="mono" style="font-size:16px;font-weight:700;color:var(--pink);cursor:pointer;text-decoration:underline" onclick="openSODetail('${s.id}')">${s.ref}</td><td style="font-size:16px"><strong>${s.customer}</strong></td><td>${s.date||'—'}</td>
       <td>${s.shirts}</td><td>${s.spares}</td>
       <td><span style="color:${left<=1?'var(--red)':left<=3?'var(--yellow)':'var(--teal)'};font-weight:600">${left}</span></td>
       <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink3);font-size:12px">${s.design||'—'}</td>
@@ -2407,6 +2476,147 @@ function getEditBreakdown(tbodyId){
 
 
 
+
+
+// ═══════ SO DETAIL ═══════
+let currentSODetailId = null;
+
+async function openSODetail(shipId){
+  currentSODetailId = shipId;
+  const ship = allShipments.find(s=>s.id===shipId);
+  if(!ship) return;
+
+  const sizes = ['xs','s','m','l','xl','xxl','xxxl'];
+  const sizeLabels = ['XS','S','M','L','XL','2XL','3XL'];
+  const printStatus = ship.printStatus||'received';
+  const printProgress = ship.printProgress||{};
+
+  // Header
+  document.getElementById('sod-ref').textContent = ship.ref;
+  document.getElementById('sod-sub').textContent = ship.customer + ' · ' + (ship.date||'') + ' · ' + (ship.design||'');
+
+  // Summary bar
+  const totalPrinted = (ship.breakdown||[]).reduce((a,r,i)=>a+(printProgress[i]?r.total||0:0),0);
+  const pct = ship.shirts>0?Math.round((totalPrinted/ship.shirts)*100):0;
+  document.getElementById('sod-summary').innerHTML = `
+    <div style="padding:1rem;text-align:center;border-right:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;font-weight:600;margin-bottom:4px">Total Shirts</div>
+      <div style="font-size:28px;font-weight:700;color:var(--pink)">${ship.shirts||0}</div>
+    </div>
+    <div style="padding:1rem;text-align:center;border-right:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;font-weight:600;margin-bottom:4px">Printed</div>
+      <div style="font-size:28px;font-weight:700;color:var(--teal)">${totalPrinted}</div>
+    </div>
+    <div style="padding:1rem;text-align:center;border-right:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;font-weight:600;margin-bottom:4px">Remaining</div>
+      <div style="font-size:28px;font-weight:700;color:var(--ink)">${(ship.shirts||0)-totalPrinted}</div>
+    </div>
+    <div style="padding:1rem;text-align:center;border-right:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;font-weight:600;margin-bottom:4px">Defects</div>
+      <div style="font-size:28px;font-weight:700;color:${(ship.totalDefects||0)>0?'var(--red)':'var(--ink4)'}">${ship.totalDefects||0}</div>
+    </div>
+    <div style="padding:1rem;text-align:center">
+      <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;font-weight:600;margin-bottom:4px">Progress</div>
+      <div style="font-size:28px;font-weight:700;color:var(--teal)">${pct}%</div>
+      <div style="height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;margin-top:4px">
+        <div style="height:100%;background:var(--teal);border-radius:3px;width:${pct}%"></div>
+      </div>
+    </div>
+  `;
+
+  // Info
+  document.getElementById('sod-customer').textContent = ship.customer||'—';
+  document.getElementById('sod-date').textContent = ship.date||'—';
+  document.getElementById('sod-design').textContent = ship.design||'—';
+  document.getElementById('sod-sides').textContent = ship.sides||'—';
+  document.getElementById('sod-status').innerHTML = badge(shipSt(ship));
+  document.getElementById('sod-total').textContent = ship.shirts||0;
+  document.getElementById('sod-spares').textContent = ship.spares||0;
+  document.getElementById('sod-def-in').innerHTML = ship.defectIn>0?`<span style="color:var(--red);font-weight:600">${ship.defectIn}</span>`:'0';
+  document.getElementById('sod-def-print').innerHTML = ship.defectPrint>0?`<span style="color:var(--red);font-weight:600">${ship.defectPrint}</span>`:'0';
+  document.getElementById('sod-notes').textContent = ship.notes||'—';
+
+  // Shirt breakdown
+  const bd = ship.breakdown||[];
+  const bdContainer = document.getElementById('sod-breakdown');
+  if(bd.length===0){
+    bdContainer.innerHTML='<div style="padding:1rem;text-align:center;color:var(--ink3);font-style:italic;font-size:14px">No breakdown recorded</div>';
+  } else {
+    bdContainer.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:14px">
+        <thead><tr style="background:var(--surface2)">
+          <th style="padding:10px 14px;text-align:left;border-bottom:1px solid var(--border)">Color</th>
+          ${sizeLabels.map(s=>`<th style="padding:10px 8px;text-align:center;border-bottom:1px solid var(--border)">${s}</th>`).join('')}
+          <th style="padding:10px 8px;text-align:center;border-bottom:1px solid var(--border)">Total</th>
+          <th style="padding:10px 14px;text-align:center;border-bottom:1px solid var(--border)">Status</th>
+        </tr></thead>
+        <tbody>
+          ${bd.map((r,i)=>{
+            const printed = printProgress[i]===true;
+            return`<tr style="background:${printed?'var(--teal2)':'var(--surface)'}">
+              <td style="padding:12px 14px;border-bottom:1px solid var(--border);font-weight:600;font-size:15px">${r.color}</td>
+              ${sizes.map(sz=>`<td style="padding:12px 8px;text-align:center;border-bottom:1px solid var(--border);font-size:14px">${r[sz]||0}</td>`).join('')}
+              <td style="padding:12px 8px;text-align:center;border-bottom:1px solid var(--border);font-weight:700;color:var(--pink);font-size:15px">${r.total||0}</td>
+              <td style="padding:12px 14px;text-align:center;border-bottom:1px solid var(--border)">
+                ${printed
+                  ? '<span style="color:var(--teal);font-weight:600;font-size:13px">✅ Printed</span>'
+                  : '<span style="color:var(--ink3);font-size:13px">⬜ Not Printed</span>'}
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  // Spare breakdown
+  const sbd = ship.spareBreakdown||[];
+  const spareSection = document.getElementById('sod-spare-section');
+  const spareContainer = document.getElementById('sod-spare-breakdown');
+  if(sbd.length>0){
+    spareSection.style.display='block';
+    spareContainer.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:14px">
+        <thead><tr style="background:var(--surface2)">
+          <th style="padding:10px 14px;text-align:left;border-bottom:1px solid var(--border)">Color</th>
+          ${sizeLabels.map(s=>`<th style="padding:10px 8px;text-align:center;border-bottom:1px solid var(--border)">${s}</th>`).join('')}
+          <th style="padding:10px 8px;text-align:center;border-bottom:1px solid var(--border)">Total</th>
+        </tr></thead>
+        <tbody>
+          ${sbd.map(r=>`<tr>
+            <td style="padding:10px 14px;border-bottom:1px solid var(--border);font-weight:600">${r.color}</td>
+            ${sizes.map(sz=>`<td style="padding:10px 8px;text-align:center;border-bottom:1px solid var(--border)">${r[sz]||0}</td>`).join('')}
+            <td style="padding:10px 8px;text-align:center;border-bottom:1px solid var(--border);font-weight:700;color:var(--teal)">${r.total||0}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } else { spareSection.style.display='none'; }
+
+  // Defects
+  const defSection = document.getElementById('sod-defects-section');
+  if((ship.defectIn||0)>0 || (ship.defectPrint||0)>0){
+    defSection.style.display='block';
+    let defHTML = '';
+    if(ship.defectIn>0) defHTML += `<div style="background:var(--yellow-bg);border:1px solid #f0d060;border-radius:var(--radius);padding:.75rem 1rem;margin-bottom:.75rem;font-size:14px"><strong style="color:var(--yellow)">📦 On Arrival:</strong> ${ship.defectIn} shirt${ship.defectIn!==1?'s':''} defective, ${ship.defectInSpare||0} spare used</div>`;
+    if(ship.defectPrint>0) defHTML += `<div style="background:var(--red-bg);border:1px solid #f5c0c0;border-radius:var(--radius);padding:.75rem 1rem;font-size:14px"><strong style="color:var(--red)">🖨 After Print:</strong> ${ship.defectPrint} shirt${ship.defectPrint!==1?'s':''} defective, ${ship.defectPrintSpare||0} spare used</div>`;
+    document.getElementById('sod-defects-content').innerHTML = defHTML;
+  } else { defSection.style.display='none'; }
+
+  const m = document.getElementById('modal-so-detail');
+  if(m){m.style.display='flex';m.classList.add('open');}
+}
+
+function openPrintStatusFromDetail(){
+  closeModal('so-detail');
+  if(currentSODetailId) openPrintStatus(currentSODetailId);
+}
+function openDefectFromDetail(){
+  closeModal('so-detail');
+  if(currentSODetailId) openDefectModal(currentSODetailId);
+}
+function openQRFromDetail(){
+  closeModal('so-detail');
+  if(currentSODetailId) openQR(currentSODetailId);
+}
 
 // ═══════ QR CODE ═══════
 let currentQRShip = null;

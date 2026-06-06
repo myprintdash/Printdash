@@ -710,25 +710,132 @@ tbody tr:hover td{background:var(--surface2)}
 
 <!-- MODAL: EDIT SHIPMENT -->
 <div class="overlay" id="modal-edit-ship">
-  <div class="modal" style="width:min(640px,100%)">
+  <div class="modal" style="width:min(680px,100%);max-height:95vh">
     <div class="modal-header"><div class="modal-title">Edit Shipment</div><button class="btn btn-ghost btn-sm" onclick="closeModal('edit-ship')">✕</button></div>
-    <div class="modal-body">
+    <div class="modal-body" style="overflow-y:auto;max-height:calc(95vh - 130px)">
       <input type="hidden" id="es-id">
-      <div class="form-row">
-        <div class="fgrp"><label>Customer</label><input type="text" id="es-cust"></div>
-        <div class="fgrp"><label>Reference</label><input type="text" id="es-ref"></div>
+
+      <!-- CUSTOMER -->
+      <div class="fgrp" style="margin-bottom:14px">
+        <label style="font-size:13px">Customer Name *</label>
+        <div style="display:flex;gap:8px;align-items:stretch">
+          <select id="es-cust-select" onchange="document.getElementById('es-cust').value=this.value"
+            style="flex:1;padding:11px 12px;font-size:15px;border:1.5px solid var(--border2);border-radius:var(--radius);font-family:var(--font-body);color:var(--ink);background:var(--surface)">
+            <option value="">— Select customer —</option>
+          </select>
+          <button class="btn btn-sm btn-pink" onclick="openManageCustomers()" style="flex-shrink:0;padding:11px 16px;font-size:14px">⚙ Manage</button>
+        </div>
+        <input type="text" id="es-cust" placeholder="Or type customer name" style="margin-top:8px;font-size:14px;padding:10px 12px">
       </div>
-      <div class="form-row">
-        <div class="fgrp"><label>Date</label><input type="date" id="es-date"></div>
-        <div class="fgrp"><label>Design</label><input type="text" id="es-design"></div>
+
+      <!-- SO REF + DATE -->
+      <div class="form-row" style="margin-bottom:14px">
+        <div class="fgrp">
+          <label style="font-size:13px">Shipment Reference *</label>
+          <div style="display:flex;align-items:center;border:1.5px solid var(--border2);border-radius:var(--radius);overflow:hidden;background:var(--surface)">
+            <span style="padding:11px 14px;background:var(--surface2);font-size:16px;font-weight:700;color:var(--pink);border-right:1.5px solid var(--border2);flex-shrink:0">SO</span>
+            <input type="text" id="es-ref" inputmode="numeric"
+              style="font-size:16px;padding:11px 12px;border:none;outline:none;flex:1;font-family:var(--font-mono);background:var(--surface);color:var(--ink)"
+              oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+          </div>
+        </div>
+        <div class="fgrp">
+          <label style="font-size:13px">Date Received *</label>
+          <input type="date" id="es-date" style="font-size:15px;padding:11px 12px">
+        </div>
       </div>
-      <div class="form-row">
-        <div class="fgrp"><label>Shirts</label><input type="number" id="es-shirts" min="0"></div>
-        <div class="fgrp"><label>Spares</label><input type="number" id="es-spares" min="0"></div>
+
+      <!-- PRINT SIDES -->
+      <div class="fgrp" style="margin-bottom:14px">
+        <label style="font-size:13px">Print Sides *</label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:8px;padding:10px 18px;border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:15px;font-weight:500;flex:1;justify-content:center" id="es-side-1-lbl">
+            <input type="radio" name="es-sides" id="es-side1" value="1-Side Print" style="display:none" onchange="highlightEditSide()">
+            🖨 1-Side Print
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:10px 18px;border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:15px;font-weight:500;flex:1;justify-content:center" id="es-side-2-lbl">
+            <input type="radio" name="es-sides" id="es-side2" value="2-Side Print" style="display:none" onchange="highlightEditSide()">
+            🖨🖨 2-Side Print
+          </label>
+        </div>
       </div>
-      <div class="fgrp"><label>Notes</label><textarea id="es-notes" rows="2"></textarea></div>
+
+      <!-- DESIGN -->
+      <div class="fgrp" style="margin-bottom:14px">
+        <label style="font-size:13px">Design / Print Description</label>
+        <div style="display:flex;gap:8px;align-items:stretch">
+          <select id="es-design-select" onchange="document.getElementById('es-design').value=this.value"
+            style="flex:1;padding:11px 12px;font-size:15px;border:1.5px solid var(--border2);border-radius:var(--radius);font-family:var(--font-body);color:var(--ink);background:var(--surface)">
+            <option value="">— Select design —</option>
+          </select>
+          <button class="btn btn-sm btn-pink" onclick="openManageDesigns()" style="flex-shrink:0;padding:11px 16px;font-size:14px">⚙ Manage</button>
+        </div>
+        <input type="text" id="es-design" placeholder="Or type a description" style="margin-top:8px;font-size:14px;padding:10px 12px">
+      </div>
+
+      <!-- SHIRT BREAKDOWN -->
+      <div style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label style="font-size:13px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em">Shirt Colors & Sizes</label>
+          <button class="btn btn-sm" onclick="addEditShirtRow()" style="font-size:13px">+ Add Color</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:14px">
+            <thead><tr style="background:var(--surface2)">
+              <th style="padding:8px 10px;text-align:left;border:1px solid var(--border);min-width:140px">Color</th>
+              <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">XS</th>
+              <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">S</th>
+              <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">M</th>
+              <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">L</th>
+              <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">XL</th>
+              <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">2XL</th>
+              <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">3XL</th>
+              <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">Total</th>
+              <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:40px"></th>
+            </tr></thead>
+            <tbody id="edit-shirt-rows"></tbody>
+          </table>
+        </div>
+        <div style="text-align:right;margin-top:6px;font-size:14px">Grand Total: <strong id="edit-grand-total" style="color:var(--pink);font-size:16px">0</strong> shirts</div>
+      </div>
+
+      <!-- SPARE BREAKDOWN -->
+      <div style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label style="font-size:13px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em">Spare Shirts <span style="color:var(--ink3);font-weight:400;text-transform:none;font-size:12px">(extra for damage cover)</span></label>
+          <button class="btn btn-sm" onclick="addEditSpareRow()" style="font-size:13px">+ Add Color</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:14px">
+            <thead><tr style="background:var(--surface2)">
+              <th style="padding:8px 10px;text-align:left;border:1px solid var(--border);min-width:140px">Color</th>
+              <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">XS</th>
+              <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">S</th>
+              <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">M</th>
+              <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">L</th>
+              <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">XL</th>
+              <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">2XL</th>
+              <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">3XL</th>
+              <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:52px">Total</th>
+              <th style="padding:8px 6px;text-align:center;border:1px solid var(--border);width:40px"></th>
+            </tr></thead>
+            <tbody id="edit-spare-rows"></tbody>
+          </table>
+        </div>
+        <div style="text-align:right;margin-top:6px;font-size:14px">Spare Total: <strong id="edit-spare-total" style="color:var(--teal);font-size:16px">0</strong> shirts</div>
+        <input type="hidden" id="es-spares" value="0">
+      </div>
+
+      <!-- NOTES -->
+      <div class="fgrp">
+        <label style="font-size:13px">Notes</label>
+        <textarea id="es-notes" rows="3" style="font-size:14px;padding:10px 12px"></textarea>
+      </div>
     </div>
-    <div class="modal-footer"><button class="btn" onclick="closeModal('edit-ship')">Cancel</button><button class="btn btn-pink" onclick="updateShipment()">Save Changes</button></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('edit-ship')">Cancel</button>
+      <button class="btn btn-pink" style="padding:12px 28px;font-size:16px" onclick="updateShipment()">Save Changes</button>
+    </div>
   </div>
 </div>
 
@@ -1096,16 +1203,69 @@ async function saveShipment(){
 
 function editShipment(id){
   const s=allShipments.find(x=>x.id===id);if(!s)return;
-  sv('es-id',id);sv('es-cust',s.customer);sv('es-ref',s.ref);sv('es-date',s.date||'');
-  sv('es-shirts',s.shirts);sv('es-spares',s.spares);sv('es-design',s.design||'');sv('es-notes',s.notes||'');
+  sv('es-id',id);
+  sv('es-cust',s.customer||'');
+  // Set SO ref - strip SO prefix
+  sv('es-ref',(s.ref||'').replace(/^SO/i,''));
+  sv('es-date',s.date||'');
+  sv('es-design',s.design||'');
+  sv('es-notes',s.notes||'');
+
+  // Populate customer dropdown
+  const csel=document.getElementById('es-cust-select');
+  if(csel){csel.innerHTML='<option value="">— Select customer —</option>'+customerList.map(c=>`<option value="${c}"${c===s.customer?' selected':''}>${c}</option>`).join('');}
+
+  // Populate design dropdown
+  const dsel=document.getElementById('es-design-select');
+  if(dsel){dsel.innerHTML='<option value="">— Select design —</option>'+designList.map(d=>`<option value="${d}"${d===s.design?' selected':''}>${d}</option>`).join('');}
+
+  // Print sides
+  const sides=s.sides||'';
+  const s1=document.getElementById('es-side1'),s2=document.getElementById('es-side2');
+  if(s1)s1.checked=sides==='1-Side Print';
+  if(s2)s2.checked=sides==='2-Side Print';
+  highlightEditSide();
+
+  // Shirt breakdown
+  const stbody=document.getElementById('edit-shirt-rows');
+  if(stbody){
+    stbody.innerHTML='';
+    const bd=s.breakdown||[];
+    if(bd.length>0) bd.forEach(r=>addEditShirtRow(r.color,r.xs,r.s,r.m,r.l,r.xl,r.xxl,r.xxxl));
+    else addEditShirtRow();
+    updateEditGrandTotal();
+  }
+
+  // Spare breakdown
+  const spbody=document.getElementById('edit-spare-rows');
+  if(spbody){
+    spbody.innerHTML='';
+    const sbd=s.spareBreakdown||[];
+    if(sbd.length>0) sbd.forEach(r=>addEditSpareRow(r.color,r.xs,r.s,r.m,r.l,r.xl,r.xxl,r.xxxl));
+    else addEditSpareRow();
+    updateEditSpareTotal();
+  }
+
   openModal('edit-ship');
 }
 
 async function updateShipment(){
   const id=v('es-id');
+  const cust=v('es-cust')||(document.getElementById('es-cust-select')?.value||'');
+  const ref='SO'+(v('es-ref')||'').replace(/^SO/i,'');
+  const sides=document.getElementById('es-side1')?.checked?'1-Side Print':document.getElementById('es-side2')?.checked?'2-Side Print':'';
+  const design=v('es-design')||(document.getElementById('es-design-select')?.value||'');
+  const fullDesign=sides?(design?sides+' — '+design:sides):design;
+  const breakdown=getEditBreakdown('edit-shirt-rows');
+  const spareBreakdown=getEditBreakdown('edit-spare-rows');
+  const shirts=breakdown.reduce((a,r)=>a+r.total,0)||0;
+  const spares=spareBreakdown.reduce((a,r)=>a+r.total,0)||0;
   try{
-    await db.collection('shipments').doc(id).update({customer:v('es-cust'),ref:v('es-ref'),date:v('es-date'),shirts:parseInt(v('es-shirts'))||0,spares:parseInt(v('es-spares'))||0,design:v('es-design'),notes:v('es-notes')});
-    await logAct('Updated shipment '+v('es-ref'));toast('Updated!','ok');closeModal('edit-ship');await loadShipments();
+    await db.collection('shipments').doc(id).update({
+      customer:cust,ref,date:v('es-date'),shirts,spares,
+      design:fullDesign,sides,breakdown,spareBreakdown,notes:v('es-notes')
+    });
+    await logAct('Updated shipment '+ref);toast('Updated!','ok');closeModal('edit-ship');await loadShipments();
   }catch(e){toast(e.message,'err');}
 }
 
@@ -1904,6 +2064,98 @@ function getPrintSides(){
   if(s1 && s1.checked) return '1-Side Print';
   if(s2 && s2.checked) return '2-Side Print';
   return '';
+}
+
+
+// ═══════ EDIT SHIPMENT HELPERS ═══════
+function addEditShirtRow(color='', xs=0, s=0, m=0, l=0, xl=0, xxl=0, xxxl=0){
+  const tbody = document.getElementById('edit-shirt-rows');
+  if(!tbody) return;
+  const row = document.createElement('tr');
+  const tot = xs+s+m+l+xl+xxl+xxxl;
+  row.innerHTML = `
+    <td style="padding:4px 6px;border:1px solid var(--border);min-width:160px">
+      <select class="edit-color-select" style="width:100%;border:none;outline:none;font-size:14px;padding:5px 4px;font-family:var(--font-body);background:transparent;cursor:pointer"
+        onchange="if(this.value==='__new__'){this.nextElementSibling.style.display='block';this.nextElementSibling.focus();this.value='';}else{this.nextElementSibling.style.display='none';}updateEditGrandTotal()">
+        ${getColorOptions(color)}
+      </select>
+      <input type="text" placeholder="Type new color" style="display:none;width:100%;border:none;border-top:1px solid var(--border);outline:none;font-size:14px;padding:5px 4px;font-family:var(--font-body)"
+        onblur="const sel=this.previousElementSibling;if(this.value.trim()){sel.innerHTML=getColorOptions(this.value.trim());sel.value=this.value.trim();}this.style.display='none'">
+    </td>
+    ${[xs,s,m,l,xl,xxl,xxxl].map(v=>`<td style="padding:4px;border:1px solid var(--border)"><input type="number" min="0" value="${v||0}" style="width:48px;text-align:center;border:none;outline:none;font-size:14px;padding:4px;font-family:var(--font-body)" oninput="updateEditRowTotal(this);updateEditGrandTotal()"></td>`).join('')}
+    <td style="padding:4px;border:1px solid var(--border);text-align:center;font-weight:700;color:var(--pink)" class="edit-row-total">${tot}</td>
+    <td style="padding:4px;border:1px solid var(--border);text-align:center"><button onclick="this.closest('tr').remove();updateEditGrandTotal()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:2px 6px">✕</button></td>
+  `;
+  tbody.appendChild(row);
+}
+
+function addEditSpareRow(color='', xs=0, s=0, m=0, l=0, xl=0, xxl=0, xxxl=0){
+  const tbody = document.getElementById('edit-spare-rows');
+  if(!tbody) return;
+  const row = document.createElement('tr');
+  const tot = xs+s+m+l+xl+xxl+xxxl;
+  row.innerHTML = `
+    <td style="padding:4px 6px;border:1px solid var(--border);min-width:160px">
+      <select class="edit-spare-color-select" style="width:100%;border:none;outline:none;font-size:14px;padding:5px 4px;font-family:var(--font-body);background:transparent;cursor:pointer"
+        onchange="if(this.value==='__new__'){this.nextElementSibling.style.display='block';this.nextElementSibling.focus();this.value='';}else{this.nextElementSibling.style.display='none';}updateEditSpareTotal()">
+        ${getColorOptions(color)}
+      </select>
+      <input type="text" placeholder="Type new color" style="display:none;width:100%;border:none;border-top:1px solid var(--border);outline:none;font-size:14px;padding:5px 4px;font-family:var(--font-body)"
+        onblur="const sel=this.previousElementSibling;if(this.value.trim()){sel.innerHTML=getColorOptions(this.value.trim());sel.value=this.value.trim();}this.style.display='none'">
+    </td>
+    ${[xs,s,m,l,xl,xxl,xxxl].map(v=>`<td style="padding:4px;border:1px solid var(--border)"><input type="number" min="0" value="${v||0}" style="width:48px;text-align:center;border:none;outline:none;font-size:14px;padding:4px;font-family:var(--font-body)" oninput="updateEditSpareRowTotal(this);updateEditSpareTotal()"></td>`).join('')}
+    <td style="padding:4px;border:1px solid var(--border);text-align:center;font-weight:700;color:var(--teal)" class="edit-spare-row-total">${tot}</td>
+    <td style="padding:4px;border:1px solid var(--border);text-align:center"><button onclick="this.closest('tr').remove();updateEditSpareTotal()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:2px 6px">✕</button></td>
+  `;
+  tbody.appendChild(row);
+}
+
+function updateEditRowTotal(inp){
+  const row=inp.closest('tr');const inputs=row.querySelectorAll('input[type=number]');
+  let t=0;inputs.forEach(i=>t+=parseInt(i.value)||0);
+  const tc=row.querySelector('.edit-row-total');if(tc)tc.textContent=t;
+}
+function updateEditGrandTotal(){
+  let t=0;document.querySelectorAll('#edit-shirt-rows input[type=number]').forEach(i=>t+=parseInt(i.value)||0);
+  const el=document.getElementById('edit-grand-total');if(el)el.textContent=t;
+}
+function updateEditSpareRowTotal(inp){
+  const row=inp.closest('tr');const inputs=row.querySelectorAll('input[type=number]');
+  let t=0;inputs.forEach(i=>t+=parseInt(i.value)||0);
+  const tc=row.querySelector('.edit-spare-row-total');if(tc)tc.textContent=t;
+}
+function updateEditSpareTotal(){
+  let t=0;document.querySelectorAll('#edit-spare-rows input[type=number]').forEach(i=>t+=parseInt(i.value)||0);
+  const el=document.getElementById('edit-spare-total');if(el)el.textContent=t;
+  const sp=document.getElementById('es-spares');if(sp)sp.value=t;
+}
+
+function highlightEditSide(){
+  const s1=document.getElementById('es-side1'),s2=document.getElementById('es-side2');
+  const l1=document.getElementById('es-side-1-lbl'),l2=document.getElementById('es-side-2-lbl');
+  const on='display:flex;align-items:center;gap:8px;padding:10px 18px;border:2px solid var(--pink);border-radius:var(--radius);cursor:pointer;font-size:15px;font-weight:500;flex:1;justify-content:center;background:var(--pink2);color:var(--pink3)';
+  const off='display:flex;align-items:center;gap:8px;padding:10px 18px;border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:15px;font-weight:500;flex:1;justify-content:center';
+  if(l1)l1.style.cssText=s1&&s1.checked?on:off;
+  if(l2)l2.style.cssText=s2&&s2.checked?on:off;
+}
+
+function getEditBreakdown(tbodyId){
+  const rows=document.querySelectorAll('#'+tbodyId+' tr');
+  const breakdown=[];
+  rows.forEach(row=>{
+    const sel=row.querySelector('select');
+    const txt=row.querySelector('input[type=text]');
+    let color=sel?sel.value:'';
+    if(!color||color==='__new__')color=txt?txt.value.trim():'';
+    if(!color)return;
+    const nums=row.querySelectorAll('input[type=number]');
+    const sizes=['xs','s','m','l','xl','xxl','xxxl'];
+    const entry={color};
+    nums.forEach((inp,i)=>entry[sizes[i]]=parseInt(inp.value)||0);
+    entry.total=Object.values(entry).filter(v=>typeof v==='number').reduce((a,b)=>a+b,0);
+    breakdown.push(entry);
+  });
+  return breakdown;
 }
 
 // ═══════ CUSTOMER PRESETS ═══════

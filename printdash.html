@@ -647,6 +647,57 @@ tbody tr:hover td{background:var(--surface2)}
   </div>
 </div>
 
+
+<!-- MODAL: PRINT STATUS -->
+<div class="overlay" id="modal-print-status">
+  <div class="modal" style="width:min(680px,100%);max-height:95vh">
+    <div class="modal-header">
+      <div class="modal-title">🖨 Print Status</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('print-status')">✕</button>
+    </div>
+    <div class="modal-body" style="overflow-y:auto;max-height:calc(95vh - 130px)">
+      <input type="hidden" id="ps-shipid">
+      <div id="ps-ship-info" style="background:var(--surface2);border-radius:var(--radius);padding:10px 14px;font-size:14px;margin-bottom:1.25rem"></div>
+
+      <!-- SO STATUS -->
+      <div style="margin-bottom:1.25rem">
+        <label style="font-size:13px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:10px">SO Status</label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <label id="pst-received-lbl" style="display:flex;align-items:center;gap:8px;padding:10px 20px;border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:15px;font-weight:500;flex:1;justify-content:center">
+            <input type="radio" name="ps-status" value="received" style="display:none" onchange="highlightPrintStatus()">
+            📦 Received
+          </label>
+          <label id="pst-printing-lbl" style="display:flex;align-items:center;gap:8px;padding:10px 20px;border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:15px;font-weight:500;flex:1;justify-content:center">
+            <input type="radio" name="ps-status" value="printing" style="display:none" onchange="highlightPrintStatus()">
+            🖨 Printing
+          </label>
+          <label id="pst-done-lbl" style="display:flex;align-items:center;gap:8px;padding:10px 20px;border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:15px;font-weight:500;flex:1;justify-content:center">
+            <input type="radio" name="ps-status" value="done" style="display:none" onchange="highlightPrintStatus()">
+            ✅ Done
+          </label>
+        </div>
+      </div>
+
+      <!-- COLOR/SIZE PROGRESS -->
+      <div>
+        <label style="font-size:13px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:10px">Color / Size Progress</label>
+        <div id="ps-color-rows" style="border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden"></div>
+        <div style="margin-top:10px;font-size:14px;color:var(--ink3)">
+          Printed: <strong id="ps-printed-count" style="color:var(--teal)">0</strong> /
+          <strong id="ps-total-count">0</strong> shirts
+          <div id="ps-progress-bar" style="height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;margin-top:6px">
+            <div id="ps-progress-fill" style="height:100%;background:var(--teal);border-radius:4px;width:0%;transition:width .3s"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('print-status')">Cancel</button>
+      <button class="btn btn-pink" style="padding:12px 28px;font-size:16px" onclick="savePrintStatus()">Save Status</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <!-- MODAL: NEW SHIPMENT -->
@@ -1208,7 +1259,12 @@ async function fetchAll(){
 }
 function sparesUsed(sid){return allOrders.filter(o=>o.shipmentId===sid).reduce((a,o)=>a+(o.sparesUsed||0),0);}
 function onRack(s){const p=allOrders.filter(o=>o.shipmentId===s.id&&(o.status==='completed'||o.status==='spare_used')).reduce((a,o)=>a+(o.qty||0),0);return Math.max(0,(s.shirts||0)-p);}
-function shipSt(s){const o=allOrders.filter(x=>x.shipmentId===s.id);if(!o.length)return'received';return o.every(x=>x.status==='completed'||x.status==='spare_used')?'completed':'in_production';}
+function shipSt(s){
+  const ps = s.printStatus||'';
+  if(ps==='done') return 'completed';
+  if(ps==='printing') return 'in_production';
+  return 'received';
+}
 function badge(s){
   const m={pending:'b-gray',in_progress:'b-blue',completed:'b-green',spare_used:'b-yellow',received:'b-teal',in_production:'b-pink'};
   const l={pending:'Pending',in_progress:'In Progress',completed:'Completed',spare_used:'Spare Used',received:'Received',in_production:'In Production'};
@@ -1281,6 +1337,7 @@ function renderShipments(){
       <td>${(s.defectIn||0)+(s.defectPrint||0)>0?`<span style="color:var(--red);font-weight:700">⚠ ${(s.defectIn||0)+(s.defectPrint||0)}</span>`:'<span style="color:var(--ink4)">—</span>'}</td>
       <td>${badge(shipSt(s))}</td>
       <td class="no-print" style="white-space:nowrap">
+        <button class="btn btn-sm" onclick="openPrintStatus('${s.id}')" style="background:var(--teal2);color:var(--teal);border-color:var(--teal)">🖨 Print</button>
         <button class="btn btn-sm" onclick="openDefectModal('${s.id}')" style="background:var(--yellow-bg);color:var(--yellow);border-color:var(--yellow)">⚠ Defects</button>
         <button class="btn btn-sm btn-ghost" onclick="editShipment('${s.id}')">Edit</button>
         ${isAdmin?`<button class="btn btn-sm btn-danger" onclick="deleteShipment('${s.id}')">Del</button>`:''}
@@ -2279,6 +2336,160 @@ function getEditBreakdown(tbodyId){
   return breakdown;
 }
 
+
+
+// ═══════ PRINT STATUS ═══════
+async function openPrintStatus(shipId){
+  const ship = allShipments.find(s=>s.id===shipId);
+  if(!ship) return;
+  sv('ps-shipid', shipId);
+
+  document.getElementById('ps-ship-info').innerHTML =
+    `<strong>${ship.customer}</strong> · <span style="color:var(--pink);font-weight:700">${ship.ref}</span> · ${ship.shirts} shirts · ${ship.design||''} · ${ship.date||''}`;
+
+  // Set SO status radio
+  const status = ship.printStatus||'received';
+  document.querySelectorAll('input[name="ps-status"]').forEach(r=>{
+    r.checked = r.value===status;
+  });
+  highlightPrintStatus();
+
+  // Build color/size rows from breakdown
+  const container = document.getElementById('ps-color-rows');
+  container.innerHTML = '';
+  const breakdown = ship.breakdown||[];
+  const printProgress = ship.printProgress||{};
+
+  if(breakdown.length===0){
+    container.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--ink3);font-style:italic;font-size:14px">No shirt breakdown recorded. Edit shipment to add colors/sizes.</div>';
+  } else {
+    const sizes = ['xs','s','m','l','xl','xxl','xxxl'];
+    const sizeLabels = ['XS','S','M','L','XL','2XL','3XL'];
+    breakdown.forEach((row, idx) => {
+      const rowDiv = document.createElement('div');
+      rowDiv.style.cssText = 'display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap';
+
+      // Printed toggle
+      const isPrinted = printProgress[idx]===true;
+      rowDiv.innerHTML = `
+        <div style="flex:0 0 auto">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" data-idx="${idx}" ${isPrinted?'checked':''} onchange="updatePrintProgress(this)"
+              style="width:20px;height:20px;cursor:pointer;accent-color:var(--teal)">
+            <span style="font-size:14px;font-weight:600;${isPrinted?'color:var(--teal);text-decoration:line-through':'color:var(--ink)'}">
+              ${isPrinted?'✅ Printed':'⬜ Not Printed'}
+            </span>
+          </label>
+        </div>
+        <div style="flex:1;min-width:140px">
+          <span style="font-size:15px;font-weight:600">${row.color}</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${sizes.map((sz,i)=>row[sz]>0?`<span style="background:${isPrinted?'var(--teal2)':'var(--surface2)'};color:${isPrinted?'var(--teal)':'var(--ink2)'};border-radius:4px;padding:3px 8px;font-size:13px;font-weight:500">${sizeLabels[i]}: ${row[sz]}</span>`:'').join('')}
+        </div>
+        <div style="flex:0 0 auto;font-size:14px;font-weight:700;color:${isPrinted?'var(--teal)':'var(--ink3)'}">
+          ${row.total||0} shirts
+        </div>
+      `;
+      container.appendChild(rowDiv);
+    });
+  }
+
+  updatePrintProgressBar(ship);
+  const m=document.getElementById('modal-print-status');
+  if(m){m.style.display='flex';m.classList.add('open');}
+}
+
+function updatePrintProgress(checkbox){
+  const idx = checkbox.dataset.idx;
+  const isPrinted = checkbox.checked;
+  const label = checkbox.nextElementSibling;
+  if(label){
+    label.textContent = isPrinted ? '✅ Printed' : '⬜ Not Printed';
+    label.style.color = isPrinted ? 'var(--teal)' : 'var(--ink)';
+    if(isPrinted) label.style.textDecoration='line-through';
+    else label.style.textDecoration='none';
+  }
+  // Update size badges color
+  const row = checkbox.closest('div[style*="display:flex"]');
+  if(row){
+    row.querySelectorAll('span[style*="border-radius:4px"]').forEach(span=>{
+      span.style.background = isPrinted?'var(--teal2)':'var(--surface2)';
+      span.style.color = isPrinted?'var(--teal)':'var(--ink2)';
+    });
+    const totalSpan = row.querySelector('div[style*="font-weight:700"]');
+    if(totalSpan) totalSpan.style.color = isPrinted?'var(--teal)':'var(--ink3)';
+  }
+  // Recalc progress
+  const shipId = v('ps-shipid');
+  const ship = allShipments.find(s=>s.id===shipId);
+  if(ship) updatePrintProgressBar(ship);
+}
+
+function updatePrintProgressBar(ship){
+  const checkboxes = document.querySelectorAll('#ps-color-rows input[type=checkbox]');
+  const breakdown = ship.breakdown||[];
+  let printed=0, total=0;
+  checkboxes.forEach((cb,i)=>{
+    const row = breakdown[i]||{};
+    const shirts = row.total||0;
+    total += shirts;
+    if(cb.checked) printed += shirts;
+  });
+  const pct = total>0?Math.round((printed/total)*100):0;
+  const pc = document.getElementById('ps-printed-count');
+  const tc = document.getElementById('ps-total-count');
+  const pf = document.getElementById('ps-progress-fill');
+  if(pc) pc.textContent = printed;
+  if(tc) tc.textContent = total;
+  if(pf) pf.style.width = pct+'%';
+}
+
+function highlightPrintStatus(){
+  const vals = ['received','printing','done'];
+  const ids = ['pst-received-lbl','pst-printing-lbl','pst-done-lbl'];
+  const colors = ['var(--blue)','var(--yellow)','var(--teal)'];
+  const bgs = ['var(--blue-bg)','var(--yellow-bg)','var(--teal2)'];
+  vals.forEach((val,i)=>{
+    const radio = document.querySelector(`input[name="ps-status"][value="${val}"]`);
+    const lbl = document.getElementById(ids[i]);
+    if(!lbl) return;
+    if(radio&&radio.checked){
+      lbl.style.cssText = `display:flex;align-items:center;gap:8px;padding:10px 20px;border:2px solid ${colors[i]};border-radius:var(--radius);cursor:pointer;font-size:15px;font-weight:600;flex:1;justify-content:center;background:${bgs[i]};color:${colors[i]}`;
+    } else {
+      lbl.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 20px;border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:15px;font-weight:500;flex:1;justify-content:center';
+    }
+  });
+}
+
+async function savePrintStatus(){
+  const shipId = v('ps-shipid');
+  const statusRadio = document.querySelector('input[name="ps-status"]:checked');
+  const printStatus = statusRadio?statusRadio.value:'received';
+
+  // Collect progress
+  const checkboxes = document.querySelectorAll('#ps-color-rows input[type=checkbox]');
+  const printProgress = {};
+  checkboxes.forEach((cb,i)=>{ printProgress[i] = cb.checked; });
+
+  // Auto-set status based on checkboxes if not manually overridden
+  const allDone = checkboxes.length>0 && Array.from(checkboxes).every(cb=>cb.checked);
+  const anyDone = Array.from(checkboxes).some(cb=>cb.checked);
+  let finalStatus = printStatus;
+  if(allDone && printStatus!=='received') finalStatus='done';
+  else if(anyDone && printStatus==='received') finalStatus='printing';
+
+  try{
+    await db.collection('shipments').doc(shipId).update({printStatus:finalStatus, printProgress});
+    // Update local cache
+    const ship = allShipments.find(s=>s.id===shipId);
+    if(ship){ship.printStatus=finalStatus;ship.printProgress=printProgress;}
+    await logAct(`Updated print status for ${ship?.ref}: ${finalStatus}`);
+    toast('Print status saved!','ok');
+    closeModal('print-status');
+    await loadShipments();
+  }catch(e){toast('Error: '+e.message,'err');}
+}
 
 // ═══════ DEFECTS ═══════
 const SIZES = ['XS','S','M','L','XL','2XL','3XL'];

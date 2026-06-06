@@ -3104,13 +3104,13 @@ async function printAllLabels(){
         ctx.fillRect(qrXp-6, qrYp-6, qrSz+12, qrSz+12);
         if(qrCanvas) ctx.drawImage(qrCanvas, qrXp, qrYp, qrSz, qrSz);
 
-        const textX=qrXp+qrSz+10, availW=W-textX-6;
+        const textX=qrXp+qrSz+10, availW=W-textX-4;
 
         ctx.fillStyle='#000000';
         let fontSize=30;
         ctx.font='bold '+fontSize+'px Arial';
         while(ctx.measureText(ship.ref).width>availW && fontSize>14){ fontSize--; ctx.font='bold '+fontSize+'px Arial'; }
-        ctx.fillText(ship.ref, textX, 8+fontSize);
+        ctx.fillText(ship.ref, textX, 12+fontSize);
 
         ctx.fillStyle='#e91e8c';
         ctx.fillRect(textX, 50, availW, 2);

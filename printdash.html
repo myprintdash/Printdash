@@ -148,13 +148,13 @@ tbody tr:hover td{background:var(--surface2)}
 
 /* REPORT */
 .rpt-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;margin-bottom:1.5rem}
-.rpt-cust{font-family:var(--font-display);font-size:34px;margin-bottom:1rem;font-weight:700}
+.rpt-cust{font-family:var(--font-display);font-size:34px;margin-bottom:1rem;font-weight:700;color:var(--ink)}
 .rpt-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1.25rem}
 .rpt-m{background:var(--surface2);border-radius:var(--radius);padding:.75rem;text-align:center}
 .rpt-m .v{font-family:var(--font-display);font-size:22px;color:var(--ink)}
 .rpt-m .l{font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
 .rpt-sec{margin-top:1.25rem}
-.rpt-sec-title{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3);margin-bottom:.75rem;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.rpt-sec-title{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink);margin-bottom:.75rem;padding-bottom:6px;border-bottom:2px solid var(--border2)}
 .print-header{display:none}
 .urow{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
 .urow:last-child{border-bottom:none}
@@ -1875,10 +1875,10 @@ function renderReports(){
 
       // Status breakdown row
       '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;font-size:13px">'+
-        '<span style="padding:4px 12px;border-radius:20px;background:var(--teal2);color:var(--teal);font-weight:600">✅ Done: '+completed+'</span>'+
-        '<span style="padding:4px 12px;border-radius:20px;background:var(--yellow-bg);color:var(--yellow);font-weight:600">🖨 Printing: '+printing+'</span>'+
-        '<span style="padding:4px 12px;border-radius:20px;background:var(--surface2);color:var(--ink3);font-weight:600">📦 Received: '+received+'</span>'+
-        (totalDef>0?'<span style="padding:4px 12px;border-radius:20px;background:var(--red-bg);color:var(--red);font-weight:600">⚠ Defects: '+totalDef+'</span>':'')+
+        '<span style="padding:5px 14px;border-radius:20px;background:var(--teal2);color:var(--teal);font-weight:700;font-size:14px">✅ Done: '+completed+'</span>'+
+        '<span style="padding:5px 14px;border-radius:20px;background:#fff3cd;color:#7a5c00;font-weight:700;font-size:14px">🖨 Printing: '+printing+'</span>'+
+        '<span style="padding:5px 14px;border-radius:20px;background:var(--surface2);color:var(--ink);font-weight:700;font-size:14px">📦 Received: '+received+'</span>'+
+        (totalDef>0?'<span style="padding:5px 14px;border-radius:20px;background:var(--red-bg);color:var(--red);font-weight:700;font-size:14px">⚠ Defects: '+totalDef+'</span>':'')+
       '</div>'+
 
       // Shipments table
@@ -1887,7 +1887,7 @@ function renderReports(){
         '<tbody>'+sortedShips.map(function(s){
           var def=(s.defectIn||0)+(s.defectPrint||0);
           var statusLabel=s.printStatus==='done'?'✅ Done':s.printStatus==='printing'?'🖨 Printing':'📦 Received';
-          var statusColor=s.printStatus==='done'?'var(--teal)':s.printStatus==='printing'?'var(--yellow)':'var(--ink3)';
+          var statusColor=s.printStatus==='done'?'var(--teal)':s.printStatus==='printing'?'#b07800':'var(--ink2)';
           return '<tr>'+
             '<td class="mono" style="font-weight:700;color:var(--pink)">'+s.ref+'</td>'+
             '<td>'+( s.date||'—')+'</td>'+

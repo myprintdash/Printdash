@@ -2737,16 +2737,13 @@ function printQRLabel(){
   const appUrl = window.location.href.split('?')[0] + '?so=' + ship.id;
   const design = (ship.design||'').replace('2-Side Print — ','2S: ').replace('1-Side Print — ','1S: ');
 
-  // Generate QR as data URL using a temp canvas
+  // Generate QR in temp div
   const tempDiv = document.createElement('div');
   tempDiv.style.cssText = 'position:fixed;left:-9999px;top:-9999px';
   document.body.appendChild(tempDiv);
   new QRCode(tempDiv, {
-    text: appUrl,
-    width: 216,
-    height: 216,
-    colorDark: '#000000',
-    colorLight: '#ffffff',
+    text: appUrl, width:216, height:216,
+    colorDark:'#000000', colorLight:'#ffffff',
     correctLevel: QRCode.CorrectLevel.M
   });
 
@@ -2755,50 +2752,52 @@ function printQRLabel(){
     const qrDataUrl = canvas ? canvas.toDataURL('image/png') : '';
     document.body.removeChild(tempDiv);
 
-    // Open print window sized exactly to label
-    const labelWin = window.open('','_blank','width=216,height=120');
-    labelWin.document.write(`<!DOCTYPE html>
-<html>
-<head>
-<style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  @page { size: 2.25in 1.25in; margin: 0; }
-  html, body { width:2.25in; height:1.25in; overflow:hidden; background:#fff; }
-  .label {
-    width:2.25in; height:1.25in;
-    display:flex; flex-direction:row;
-    align-items:center;
-    padding:3pt 4pt;
-    gap:4pt;
-    font-family:Arial,sans-serif;
-    background:#fff;
-  }
-  .qr img { width:82pt; height:82pt; display:block; }
-  .info { flex:1; overflow:hidden; display:flex; flex-direction:column; justify-content:center; gap:1.5pt; }
-  .ref { font-size:13pt; font-weight:900; color:#000; white-space:nowrap; letter-spacing:0.3px; line-height:1; }
-  .line { height:1.5pt; background:#e91e8c; border-radius:1pt; margin:1pt 0; }
-  .cust { font-size:7pt; font-weight:700; color:#222; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .info-txt { font-size:6pt; color:#444; line-height:1.3; }
-  .scan { font-size:5pt; color:#999; margin-top:1pt; }
-</style>
-</head>
-<body>
-<div class="label">
-  <div class="qr"><img src="${qrDataUrl}" width="82" height="82"></div>
-  <div class="info">
-    <div class="ref">${ship.ref}</div>
-    <div class="line"></div>
-    <div class="cust">${ship.customer||''}</div>
-    <div class="info-txt">${design}${ship.shirts?' · '+ship.shirts+' shirts':''}</div>
-    <div class="scan">Scan to update print status</div>
-  </div>
-</div>
-<script>window.onload=function(){window.print();setTimeout(()=>window.close(),1500);}<\/script>
-</body>
-</html>`);
-    labelWin.document.close();
+    // Build label HTML
+    const html = `<!DOCTYPE html><html><head><style>
+      *{margin:0;padding:0;box-sizing:border-box}
+      @page{size:2.25in 1.25in;margin:0}
+      html,body{width:2.25in;height:1.25in;overflow:hidden;background:#fff;font-family:Arial,sans-serif}
+      .label{width:2.25in;height:1.25in;display:flex;flex-direction:row;align-items:center;padding:3pt 4pt;gap:5pt}
+      .qr img{width:82pt;height:82pt;display:block}
+      .info{flex:1;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:2pt}
+      .ref{font-size:13pt;font-weight:900;color:#000;white-space:nowrap;line-height:1}
+      .line{height:1.5pt;background:#e91e8c;margin:1pt 0}
+      .cust{font-size:7pt;font-weight:700;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .des{font-size:6pt;color:#444;line-height:1.3}
+      .scan{font-size:5pt;color:#999;margin-top:1pt}
+    </style></head><body>
+    <div class="label">
+      <div class="qr"><img src="${qrDataUrl}"></div>
+      <div class="info">
+        <div class="ref">${ship.ref}</div>
+        <div class="line"></div>
+        <div class="cust">${ship.customer||''}</div>
+        <div class="des">${design}${ship.shirts?' · '+ship.shirts+' shirts':''}</div>
+        <div class="scan">Scan to update print status</div>
+      </div>
+    </div>
+    </body></html>`;
+
+    // Use hidden iframe - no popup blocker issues
+    let iframe = document.getElementById('print-iframe');
+    if(!iframe){
+      iframe = document.createElement('iframe');
+      iframe.id = 'print-iframe';
+      iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:2.25in;height:1.25in;border:none';
+      document.body.appendChild(iframe);
+    }
+    iframe.onload = function(){
+      setTimeout(()=>{
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      }, 300);
+    };
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
+    doc.open();
+    doc.write(html);
+    doc.close();
   }, 400);
-}
+}}
 
 function downloadQR(){
   const canvas = document.querySelector('#qr-code-container canvas');

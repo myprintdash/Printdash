@@ -379,6 +379,33 @@ tbody tr:hover td{background:var(--surface2)}
       </div>
       <div class="metrics" id="dash-metrics"></div>
       <div id="dash-alerts"></div>
+
+  <!-- IMPRESSIONS BOX -->
+  <div style="background:var(--surface);border:2px solid var(--pink);border-radius:var(--radius-lg);padding:1.25rem 1.5rem;margin-bottom:1.5rem">
+    <div style="font-size:12px;font-weight:700;color:var(--pink);text-transform:uppercase;letter-spacing:.06em;margin-bottom:1rem">🖨 Impression Summary</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+      <div style="text-align:center;background:var(--surface2);border-radius:var(--radius);padding:1rem">
+        <div style="font-size:12px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Total Shirts</div>
+        <div id="imp-total-shirts" style="font-family:var(--font-display);font-size:36px;font-weight:700;color:var(--ink)">0</div>
+        <div style="font-size:12px;color:var(--ink4);margin-top:4px">across all SOs</div>
+      </div>
+      <div style="text-align:center;background:var(--pink2);border-radius:var(--radius);padding:1rem;border:1.5px solid var(--pink)">
+        <div style="font-size:12px;font-weight:600;color:var(--pink3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">1-Side Impressions</div>
+        <div id="imp-1side-shirts" style="font-family:var(--font-display);font-size:36px;font-weight:700;color:var(--pink)">0</div>
+        <div id="imp-1side-count" style="font-size:12px;color:var(--pink3);margin-top:4px">0 SOs</div>
+      </div>
+      <div style="text-align:center;background:var(--teal2);border-radius:var(--radius);padding:1rem;border:1.5px solid var(--teal)">
+        <div style="font-size:12px;font-weight:600;color:var(--teal);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">2-Side Impressions</div>
+        <div id="imp-2side-shirts" style="font-family:var(--font-display);font-size:36px;font-weight:700;color:var(--teal)">0</div>
+        <div id="imp-2side-count" style="font-size:12px;color:var(--teal);margin-top:4px">0 SOs × 2 sides</div>
+      </div>
+      <div style="text-align:center;background:var(--surface2);border-radius:var(--radius);padding:1rem;border:1.5px solid var(--border2)">
+        <div style="font-size:12px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Total Impressions</div>
+        <div id="imp-total" style="font-family:var(--font-display);font-size:36px;font-weight:700;color:var(--ink)">0</div>
+        <div style="font-size:12px;color:var(--ink4);margin-top:4px">1-side + (2-side × 2)</div>
+      </div>
+    </div>
+  </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
         <div class="card"><div class="card-header"><span class="card-title">Recent Shipments</span></div>
           <div class="table-wrap"><table><thead><tr><th>Customer</th><th>Ref</th><th>Shirts</th><th>Status</th></tr></thead><tbody id="db-ship"></tbody></table></div></div>
@@ -1144,6 +1171,28 @@ async function loadDashboard(){
   document.getElementById('dash-alerts').innerHTML=alerts.map(s=>{const r=(s.spares||0)-sparesUsed(s.id);return`<div class="alert-banner alert-warn">⚠ <strong>${s.customer}</strong> (${s.ref}) — only <strong>${r}</strong> spare shirt${r!==1?'s':''} remaining.</div>`}).join('');
   document.getElementById('db-ship').innerHTML=allShipments.slice(0,6).map(s=>`<tr><td><strong>${s.customer}</strong></td><td class="mono">${s.ref}</td><td>${s.shirts}</td><td>${badge(shipSt(s))}</td></tr>`).join('')||`<tr class="empty-row"><td colspan="4">No shipments yet</td></tr>`;
   document.getElementById('db-ord').innerHTML=allOrders.slice(0,6).map(o=>{const s=allShipments.find(x=>x.id===o.shipmentId);return`<tr><td>${s?s.customer:'—'}</td><td>${o.qty}</td><td>${o.sparesUsed||0}</td><td>${badge(o.status)}</td></tr>`}).join('')||`<tr class="empty-row"><td colspan="4">No orders yet</td></tr>`;
+
+  // Calculate impressions
+  let shirts1=0, count1=0, shirts2=0, count2=0;
+  allShipments.forEach(s=>{
+    const shirts = s.shirts||0;
+    const side = (s.sides||s.design||'').toLowerCase();
+    if(side.includes('2-side')||side.includes('2 side')){
+      shirts2 += shirts; count2++;
+    } else {
+      shirts1 += shirts; count1++;
+    }
+  });
+  const totalShirts = shirts1 + shirts2;
+  const totalImpressions = shirts1 + (shirts2 * 2);
+
+  const el = (id,val) => { const e=document.getElementById(id); if(e) e.textContent=val; };
+  el('imp-total-shirts', totalShirts.toLocaleString());
+  el('imp-1side-shirts', shirts1.toLocaleString());
+  el('imp-1side-count', count1+' SO'+(count1!==1?'s':''));
+  el('imp-2side-shirts', (shirts2*2).toLocaleString());
+  el('imp-2side-count', count2+' SO'+(count2!==1?'s':'')+' × 2 sides');
+  el('imp-total', totalImpressions.toLocaleString());
 }
 
 // ═══════ SHIPMENTS ═══════

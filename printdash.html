@@ -665,7 +665,7 @@ tbody tr:hover td{background:var(--surface2)}
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('defects')">Cancel</button>
-      <button class="btn btn-pink" style="padding:12px 28px;font-size:16px" onclick="saveDefects()">Save Defects</button>
+      <button class="btn btn-pink" style="padding:14px 32px;font-size:17px;width:100%" onclick="saveDefects()">💾 Save Defects</button>
     </div>
   </div>
 </div>
@@ -2840,7 +2840,7 @@ async function printAllLabels(){
       new QRCode(tempDiv, {
         text: appUrl, width:200, height:200,
         colorDark:'#000000', colorLight:'#ffffff',
-        correctLevel: QRCode.CorrectLevel.M
+        correctLevel: QRCode.CorrectLevel.H
       });
       setTimeout(()=>{
         const qrCanvas = tempDiv.querySelector('canvas');
@@ -2850,7 +2850,10 @@ async function printAllLabels(){
         const ctx = canvas.getContext('2d');
         ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,H);
 
-        const qrSz=110, qrXp=40, qrYp=(H-qrSz)/2;
+        // Draw white quiet zone around QR for better scanning
+        const qrSz=130, qrXp=35, qrYp=(H-qrSz)/2;
+        ctx.fillStyle='#ffffff';
+        ctx.fillRect(qrXp-6, qrYp-6, qrSz+12, qrSz+12);
         if(qrCanvas) ctx.drawImage(qrCanvas, qrXp, qrYp, qrSz, qrSz);
 
         const textX=qrXp+qrSz+10, availW=W-textX-6;
@@ -3025,9 +3028,12 @@ function printQRLabel(){
     ctx.fillRect(0, 0, W, H);
 
     // QR on left, vertically centered - smaller
-    const qrSize = 110;
-    const qrX = 40;
+    const qrSize = 130;
+    const qrX = 35;
     const qrY = (H - qrSize) / 2;
+    // White quiet zone
+    ctx.fillStyle='#ffffff';
+    ctx.fillRect(qrX-6, qrY-6, qrSize+12, qrSize+12);
     if(qrCanvas) ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
 
     // Text on right - clean fixed positions
@@ -3640,13 +3646,17 @@ function openModal(name){
 }
 function closeModal(name){
   const m = document.getElementById('modal-'+name);
-  if(m){ m.classList.remove('open'); m.style.display=''; }
+  if(m){ m.classList.remove('open'); m.style.display='none'; setTimeout(()=>{m.style.display='';},50); }
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));});
-// Close overlay when clicking backdrop (event delegation - works for all overlays)
+// Close overlay when clicking backdrop
 document.addEventListener('click', e=>{
   if(e.target.classList.contains('overlay') && e.target.classList.contains('open')){
-    e.target.classList.remove('open');
+    // Don't close defects modal on mobile - too easy to accidentally tap backdrop
+    const noAutoClose = ['modal-defects','modal-ship','modal-edit-ship','modal-print-status'];
+    if(!noAutoClose.includes(e.target.id)){
+      e.target.classList.remove('open');
+    }
   }
 });
 

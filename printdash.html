@@ -2657,9 +2657,15 @@ function openQRFromDetail(){
 
 // ═══════ PRINT ALL LABELS ═══════
 async function printAllLabels(){
-  if(!allShipments.length){ toast('No shipments to print.','err'); return; }
+  toast('Fetching all shipments...', 'ok');
 
-  const sorted = [...allShipments].sort((a,b)=>{
+  // Always fetch ALL shipments fresh from Firebase
+  const snap = await db.collection('shipments').orderBy('createdAt','desc').get();
+  const allSOs = snap.docs.map(d=>({id:d.id,...d.data()}));
+
+  if(!allSOs.length){ toast('No shipments found.','err'); return; }
+
+  const sorted = allSOs.sort((a,b)=>{
     return (parseInt((a.ref||'').replace(/[^0-9]/g,''))||0) - (parseInt((b.ref||'').replace(/[^0-9]/g,''))||0);
   });
 

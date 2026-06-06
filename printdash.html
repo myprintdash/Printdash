@@ -1594,7 +1594,7 @@ async function saveShipment(){
   try{
     const spareBreakdown = getSpareBreakdown();
     const spares = spareBreakdown.reduce((a,r)=>a+r.total,0)||parseInt(document.getElementById('ms-spares')?.value)||0;
-    const docRef = await db.collection('shipments').add({customer:cust,ref,date,shirts,spares,design:fullDesign,sides,breakdown,spareBreakdown,notes:v('ms-notes'),createdBy:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    const docRef = await db.collection('shipments').add({customer:cust,ref:ref,date:date,shirts:shirts,spares:spares,design:fullDesign,sides:sides,breakdown:breakdown,spareBreakdown:spareBreakdown,notes:v('ms-notes'),createdBy:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     await logAct(`Created shipment ${ref} — ${cust}`);
     toast('Shipment saved!','ok');closeModal('ship');
     ['ms-cust','ms-design','ms-notes'].forEach(id=>sv(id,''));sv('ms-ref','');sv('ms-spares','0');
@@ -2335,7 +2335,7 @@ function getSpareBreakdown(){
     const sizes = ['xs','s','m','l','xl','xxl','xxxl'];
     const entry = { color };
     numInputs.forEach((inp,i) => entry[sizes[i]] = parseInt(inp.value)||0);
-    entry.total = Object.values(entry).filter(v=>typeof v==='number').reduce((a,b)=>a+b,0);
+    entry.total = (entry.xs||0)+(entry.s||0)+(entry.m||0)+(entry.l||0)+(entry.xl||0)+(entry.xxl||0)+(entry.xxxl||0);
     breakdown.push(entry);
   });
   return breakdown;
@@ -2463,7 +2463,7 @@ function getShirtBreakdown(){
     const sizes = ['xs','s','m','l','xl','xxl','xxxl'];
     const entry = { color };
     numInputs.forEach((inp,i) => entry[sizes[i]] = parseInt(inp.value)||0);
-    entry.total = Object.values(entry).filter(v=>typeof v==='number').reduce((a,b)=>a+b,0);
+    entry.total = (entry.xs||0)+(entry.s||0)+(entry.m||0)+(entry.l||0)+(entry.xl||0)+(entry.xxl||0)+(entry.xxxl||0);
     breakdown.push(entry);
   });
   return breakdown;
@@ -3506,7 +3506,7 @@ function getDefectRows(tbodyId){
     const qty = parseInt(inputs[0]?.value)||0;
     const spare = parseInt(inputs[1]?.value)||0;
     const reason = selects[2]?selects[2].value:'';
-    if(color||qty>0) items.push({color,size,qty,spare,reason});
+    if(color||qty>0) items.push({color:color,size:size,qty:qty,spare:spare,reason:reason});
   });
   return items;
 }
@@ -3580,7 +3580,7 @@ async function saveDefects(){
     await db.collection('shipments').doc(shipId).update({
       defectIn:inQty, defectInSpare:inSpare,
       defectPrint:printQty, defectPrintSpare:printSpare,
-      totalDefects, totalSpareUsed
+      totalDefects: totalDefects, totalSpareUsed: totalSpareUsed
     });
 
     await logAct(`Defects for ${allShipments.find(s=>s.id===shipId)?.ref}: ${inQty} on arrival + ${printQty} after print`);

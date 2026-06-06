@@ -3562,14 +3562,14 @@ async function saveDefects(){
 
     if(inItems.length>0){
       await db.collection('defects').add({
-        shipmentId, type:'inspection', qty:inQty, spareUsed:inSpare,
+        shipmentId: shipId, type:'inspection', qty:inQty, spareUsed:inSpare,
         items:inItems, createdBy:currentUser.uid,
         createdAt:firebase.firestore.FieldValue.serverTimestamp()
       });
     }
     if(printItems.length>0){
       await db.collection('defects').add({
-        shipmentId, type:'print', qty:printQty, spareUsed:printSpare,
+        shipmentId: shipId, type:'print', qty:printQty, spareUsed:printSpare,
         items:printItems, createdBy:currentUser.uid,
         createdAt:firebase.firestore.FieldValue.serverTimestamp()
       });

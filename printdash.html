@@ -680,7 +680,7 @@ tbody tr:hover td{background:var(--surface2)}
 
 <!-- MODAL: PRINT STATUS -->
 <div class="overlay" id="modal-print-status">
-  <div class="modal" style="width:min(680px,100%);max-height:95vh">
+  <div class="modal" style="width:min(680px,100%);max-height:95vh;display:flex;flex-direction:column">
     <div class="modal-header">
       <div class="modal-title">🖨 Print Status</div>
       <button class="btn btn-ghost btn-sm" onclick="closeModal('print-status')">✕</button>
@@ -721,8 +721,12 @@ tbody tr:hover td{background:var(--surface2)}
         </div>
       </div>
     </div>
-    <div class="modal-footer">
+    <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
       <button class="btn" onclick="closeModal('print-status')">Cancel</button>
+      <button class="btn" onclick="openDefectFromPrintStatus()" 
+        style="background:var(--yellow-bg);color:var(--yellow);border-color:var(--yellow);padding:12px 20px;font-size:15px">
+        ⚠ Record Defect
+      </button>
       <button class="btn btn-pink" style="padding:12px 28px;font-size:16px" onclick="savePrintStatus()">Save Status</button>
     </div>
   </div>
@@ -2707,6 +2711,13 @@ function openDefectFromDetail(){
 function openQRFromDetail(){
   closeModal('so-detail');
   if(currentSODetailId) openQR(currentSODetailId);
+}
+function openDefectFromPrintStatus(){
+  // Get current shipId from print status modal
+  const shipId = v('ps-shipid');
+  if(!shipId) return;
+  closeModal('print-status');
+  setTimeout(()=>openDefectModal(shipId), 200);
 }
 
 

@@ -1978,7 +1978,7 @@ async function loadInventory(){
 async function loadReports(){
   await fetchAll();
   const sel=document.getElementById('rpt-cust');const prev=sel.value;
-  var custs=Array.from(new Set(allShipments.map(s=>s.customer))].sort();
+  var custs=Array.from(new Set(allShipments.map(function(s){return s.customer;}))).sort();
   sel.innerHTML='<option value="">All customers</option>'+custs.map(c=>`<option value="${c}"${c===prev?' selected':''}>${c}</option>`).join('');
   renderReports();
 }

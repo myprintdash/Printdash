@@ -2169,6 +2169,156 @@ function renderReports(){
 }
 
 
+
+// ═══════ SHIPPING ═══════
+var selectedCarrier = '';
+
+function selectCarrier(carrier){
+  selectedCarrier = carrier;
+  var ids = {'UPS':'carrier-ups-lbl','FedEx':'carrier-fedex-lbl','USPS':'carrier-usps-lbl','Pickup':'carrier-pickup-lbl'};
+  for(var c in ids){
+    var lbl = document.getElementById(ids[c]);
+    if(!lbl) continue;
+    if(c===carrier){
+      lbl.style.borderColor='var(--pink)';
+      lbl.style.background='var(--pink2)';
+      lbl.style.color='var(--pink3)';
+    } else {
+      lbl.style.borderColor='var(--border2)';
+      lbl.style.background='';
+      lbl.style.color='';
+    }
+  }
+  var tf = document.getElementById('tracking-fields');
+  if(tf) tf.style.display = carrier==='Pickup'?'none':'grid';
+}
+
+async function loadShipping(){
+  try{ await fetchAll(); }catch(e){ toast('Load error: '+e.message,'err'); return; }
+  var shipped=0, pickup=0, ready=0, pending=0;
+  for(var i=0;i<allShipments.length;i++){
+    var s=allShipments[i];
+    var ss=s.shippingStatus||'';
+    var ps=s.printStatus||'';
+    if(ss==='shipped') shipped++;
+    else if(ss==='pickup') pickup++;
+    else if(ps==='done') ready++;
+    else pending++;
+  }
+  var el=document.getElementById('shipping-metrics');
+  if(el) el.innerHTML=
+    '<div class="metric"><div class="metric-label">Ready to Ship</div><div class="metric-value" style="color:var(--teal)">'+ready+'</div><div class="metric-sub">Print done</div></div>'+
+    '<div class="metric"><div class="metric-label">Shipped</div><div class="metric-value" style="color:var(--pink)">'+shipped+'</div><div class="metric-sub">Sent out</div></div>'+
+    '<div class="metric"><div class="metric-label">Pickup</div><div class="metric-value" style="color:#5b5bd6">'+pickup+'</div><div class="metric-sub">Picked up</div></div>'+
+    '<div class="metric"><div class="metric-label">In Progress</div><div class="metric-value">'+pending+'</div><div class="metric-sub">Still printing</div></div>';
+  renderShipping();
+}
+
+function renderShipping(){
+  var q=(document.getElementById('ship-out-q')||{value:''}).value.toLowerCase();
+  var f=(document.getElementById('ship-out-f')||{value:''}).value;
+  var tbody=document.getElementById('shipping-tbody');
+  if(!tbody){ toast('tbody missing','err'); return; }
+  toast('Rendering '+allShipments.length+' shipments','ok');
+
+  var list=[];
+  for(var i=0;i<allShipments.length;i++){
+    var s=allShipments[i];
+    var matchQ=!q||(s.ref||'').toLowerCase().includes(q)||(s.customer||'').toLowerCase().includes(q);
+    var ss=s.shippingStatus||'';
+    var ps=s.printStatus||'';
+    var matchF=!f||(f==='ready'?ps==='done'&&!ss:f==='shipped'?ss==='shipped':f==='pickup'?ss==='pickup':true);
+    if(matchQ&&matchF) list.push(s);
+  }
+  list.sort(function(a,b){
+    return (parseInt((a.ref||'').replace(/[^0-9]/g,''))||0)-(parseInt((b.ref||'').replace(/[^0-9]/g,''))||0);
+  });
+
+  if(!list.length){
+    tbody.innerHTML='<tr class="empty-row"><td colspan="10">No shipments ('+allShipments.length+' loaded)</td></tr>';
+    return;
+  }
+
+  var rows='';
+  for(var j=0;j<list.length;j++){
+    var s=list[j];
+    var ps=s.printStatus||'received';
+    var ss=s.shippingStatus||'';
+    var psColor=ps==='done'?'var(--teal)':ps==='printing'?'#7a5c00':'var(--ink3)';
+    var psLabel=ps==='done'?'Done':ps==='printing'?'Printing':'Received';
+    var carrier=s.carrier||'';
+    var carrierDisplay=carrier?({'UPS':'UPS','FedEx':'FedEx','USPS':'USPS','Pickup':'Pickup'}[carrier]||carrier):'—';
+    var shipSt=ss==='shipped'?'<span style="color:var(--pink);font-weight:700">Shipped</span>':ss==='pickup'?'<span style="color:#5b5bd6;font-weight:700">Picked Up</span>':ps==='done'?'<span style="color:var(--teal);font-weight:700">Ready</span>':'<span style="color:var(--ink3)">Not Ready</span>';
+    rows+='<tr>'+
+      '<td class="mono" style="font-weight:800;color:var(--pink)">'+(s.ref||'')+'</td>'+
+      '<td style="font-weight:600">'+(s.customer||'—')+'</td>'+
+      '<td style="text-align:center">'+(s.shirts||0)+'</td>'+
+      '<td style="color:'+psColor+';font-weight:600">'+psLabel+'</td>'+
+      '<td>'+carrierDisplay+'</td>'+
+      '<td style="font-size:13px">'+(s.trackingNumber||'—')+'</td>'+
+      '<td style="font-size:13px">'+(s.bolNumber||'—')+'</td>'+
+      '<td>'+(s.shipDate||'—')+'</td>'+
+      '<td>'+shipSt+'</td>'+
+      '<td class="no-print"><button class="btn btn-sm btn-pink" data-sid="'+s.id+'" onclick="openShipOut(this.dataset.sid)">Ship</button></td>'+
+    '</tr>';
+  }
+  tbody.innerHTML=rows;
+}
+
+function openShipOut(shipId){
+  var ship=null;
+  for(var i=0;i<allShipments.length;i++){if(allShipments[i].id===shipId){ship=allShipments[i];break;}}
+  if(!ship) return;
+  sv('so-shipid',shipId);
+  sv('so-tracking',ship.trackingNumber||'');
+  sv('so-bol',ship.bolNumber||'');
+  sv('so-notes',ship.shipNotes||'');
+  sv('so-boxes',ship.boxes||1);
+  sv('so-date',new Date().toISOString().split('T')[0]);
+  document.getElementById('so-ship-info').innerHTML='<span style="color:var(--pink);font-weight:800">'+ship.ref+'</span> &middot; '+(ship.customer||'')+' &middot; '+(ship.shirts||0)+' shirts';
+  selectedCarrier=ship.carrier||'';
+  var ids={'UPS':'carrier-ups-lbl','FedEx':'carrier-fedex-lbl','USPS':'carrier-usps-lbl','Pickup':'carrier-pickup-lbl'};
+  for(var c in ids){var lbl=document.getElementById(ids[c]);if(lbl){lbl.style.borderColor='var(--border2)';lbl.style.background='';lbl.style.color='';}}
+  if(ship.carrier) selectCarrier(ship.carrier);
+  var m=document.getElementById('modal-ship-out');
+  if(m){m.style.display='flex';m.classList.add('open');}
+}
+
+async function saveShipping(){
+  var shipId=v('so-shipid');
+  if(!selectedCarrier){toast('Please select a carrier.','err');return;}
+  var date=v('so-date');
+  if(!date){toast('Please enter a ship date.','err');return;}
+  var status=selectedCarrier==='Pickup'?'pickup':'shipped';
+  try{
+    await db.collection('shipments').doc(shipId).update({
+      'carrier':selectedCarrier,
+      'trackingNumber':v('so-tracking'),
+      'bolNumber':v('so-bol'),
+      'shipDate':date,
+      'boxes':parseInt(v('so-boxes'))||1,
+      'shipNotes':v('so-notes'),
+      'shippingStatus':status,
+      'shippedAt':firebase.firestore.FieldValue.serverTimestamp(),
+      'shippedBy':currentUser.uid
+    });
+    for(var i=0;i<allShipments.length;i++){
+      if(allShipments[i].id===shipId){
+        allShipments[i].carrier=selectedCarrier;
+        allShipments[i].shippingStatus=status;
+        allShipments[i].shipDate=date;
+        allShipments[i].trackingNumber=v('so-tracking');
+        allShipments[i].bolNumber=v('so-bol');
+        break;
+      }
+    }
+    await logAct('Shipped SO via '+selectedCarrier);
+    toast(selectedCarrier==='Pickup'?'Marked as picked up!':'Shipped via '+selectedCarrier,'ok');
+    closeModal('ship-out');
+    renderShipping();
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
 // ═══════ USERS ═══════
 async function loadUsers(){
   const snap=await db.collection('users').orderBy('createdAt').get();

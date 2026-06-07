@@ -1595,8 +1595,18 @@ function nav(page){
   document.querySelectorAll('.topbar-nav button').forEach(function(b){b.classList.remove('active');});
   document.getElementById('page-'+page).classList.add('active');
   const nb=document.getElementById('nav-'+page);if(nb)nb.classList.add('active');
-  const loaders={dashboard:loadDashboard,shipments:loadShipments,orders:loadOrders,shipping:loadShipping,inventory:loadInventory,reports:loadReports,users:loadUsers,log:loadLog,shirts:loadShirts};
-  if(loaders[page])loaders[page]();
+  var loaderMap = {
+    'dashboard': function(){loadDashboard();},
+    'shipments': function(){loadShipments();},
+    'orders': function(){loadOrders();},
+    'shipping': function(){loadShipping();},
+    'inventory': function(){loadInventory();},
+    'reports': function(){loadReports();},
+    'users': function(){loadUsers();},
+    'log': function(){loadLog();},
+    'shirts': function(){loadShirts();}
+  };
+  if(loaderMap[page]) loaderMap[page]();
 }
 
 // ═══════ DATA ═══════
@@ -4110,17 +4120,6 @@ document.addEventListener('click', e=>{
     }
   }
 });
-
-// Global error catcher
-window.onerror = function(msg, src, line, col, err){
-  document.body.innerHTML = '<div style="padding:2rem;font-family:monospace;background:#fff;color:#c00;max-width:800px;margin:2rem auto">' +
-    '<h2>JS Error (line ' + line + ')</h2>' +
-    '<p><strong>' + msg + '</strong></p>' +
-    '<p>Source: ' + src + '</p>' +
-    (err ? '<pre>' + err.stack + '</pre>' : '') +
-    '</div>';
-  return true;
-};
 
 boot();
 </script>

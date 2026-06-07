@@ -454,7 +454,7 @@ tbody tr:hover td{background:var(--surface2)}
         </div>
       </div>
       <div class="card" style="padding:0"><div class="table-wrap"><table>
-        <thead><tr><th>Ref</th><th>Customer</th><th>Date</th><th>Shirts In</th><th>Spares In</th><th>Spares Left</th><th>Design</th><th>Defects</th><th>Status</th><th class="no-print"></th></tr></thead>
+        <thead><tr><th style="width:40px;text-align:center">✓</th><th>Ref</th><th>Customer</th><th>Date</th><th>Shirts In</th><th>Spares In</th><th>Spares Left</th><th>Design</th><th>Defects</th><th>Status</th><th class="no-print"></th></tr></thead>
         <tbody id="ship-tbody"></tbody>
       </table></div></div>
     </div>
@@ -1575,6 +1575,11 @@ function renderShipments(){
   tbody.innerHTML=allShipments.filter(s=>s.customer.toLowerCase().includes(q)||s.ref.toLowerCase().includes(q)).map(s=>{
     const used=sparesUsed(s.id),left=(s.spares||0)-used;
     return`<tr>
+      <td style="text-align:center;padding:8px">
+        <input type="checkbox" ${s.verified?'checked':''} 
+          onchange="toggleVerified('${s.id}',this.checked)"
+          style="width:20px;height:20px;cursor:pointer;accent-color:var(--teal)">
+      </td>
       <td class="mono" style="font-size:16px;font-weight:700;color:var(--pink);cursor:pointer;text-decoration:underline" onclick="openSODetail('${s.id}')">${s.ref}</td><td style="font-size:16px"><strong>${s.customer}</strong></td><td>${s.date||'—'}</td>
       <td>${s.shirts}</td><td>${s.spares}</td>
       <td><span style="color:${left<=1?'var(--red)':left<=3?'var(--yellow)':'var(--teal)'};font-weight:600">${left}</span></td>
@@ -3898,6 +3903,17 @@ async function removePreset(type, idx){
   refreshDatalist(type==='customers'?'cust-list':'design-list', presets[type]);
   renderPresetList(type);
   toast('Removed.','ok');
+}
+
+
+// ═══════ SO VERIFICATION ═══════
+async function toggleVerified(shipId, checked){
+  try{
+    await db.collection('shipments').doc(shipId).update({'verified': checked});
+    const ship = allShipments.find(function(s){return s.id===shipId;});
+    if(ship) ship.verified = checked;
+    toast(checked ? '✅ SO verified!' : 'Verification removed', 'ok');
+  }catch(e){ toast('Error: '+e.message,'err'); }
 }
 
 // ═══════ MODALS ═══════

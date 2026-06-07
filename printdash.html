@@ -524,8 +524,13 @@ tbody tr:hover td{background:var(--surface2)}
 
     <!-- USERS -->
     <div id="page-users" class="page">
-      <div class="page-header"><div class="page-title">Staff Accounts <small>All registered users</small></div></div>
-      <div class="card"><div class="card-body" id="users-list"></div></div>
+      <div class="page-header">
+        <div class="page-title">Users <small>Manage staff access &amp; permissions</small></div>
+        <div class="page-actions no-print">
+          <button class="btn btn-pink btn-sm" onclick="openAddUser()">+ Add User</button>
+        </div>
+      </div>
+      <div id="users-list"></div>
     </div>
 
     <!-- LOG -->
@@ -1045,6 +1050,67 @@ tbody tr:hover td{background:var(--surface2)}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('ship-out')">Cancel</button>
       <button class="btn btn-pink" style="padding:12px 28px;font-size:16px" onclick="saveShipping()">🚚 Mark as Shipped</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL: ADD/EDIT USER -->
+<div class="overlay" id="modal-add-user">
+  <div class="modal" style="width:min(560px,100%);max-height:95vh">
+    <div class="modal-header">
+      <div class="modal-title" id="add-user-title">Add User</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('add-user')">✕</button>
+    </div>
+    <div class="modal-body" style="overflow-y:auto;max-height:calc(95vh - 130px)">
+      <input type="hidden" id="au-uid">
+
+      <div class="form-row" style="margin-bottom:14px">
+        <div class="fgrp"><label>Full Name *</label><input type="text" id="au-name" placeholder="e.g. John Smith" style="font-size:15px"></div>
+        <div class="fgrp"><label>Email *</label><input type="email" id="au-email" placeholder="john@example.com" style="font-size:15px"></div>
+      </div>
+
+      <div class="form-row" style="margin-bottom:14px">
+        <div class="fgrp">
+          <label>Role *</label>
+          <select id="au-role" onchange="updatePermUI()" style="font-size:15px">
+            <option value="staff">Staff — view &amp; add, no delete</option>
+            <option value="admin">Admin — full access</option>
+            <option value="custom">Custom — set permissions below</option>
+          </select>
+        </div>
+        <div class="fgrp" id="au-pw-wrap">
+          <label>Password *</label>
+          <input type="password" id="au-password" placeholder="Min 6 characters" style="font-size:15px">
+          <div class="hint">User will log in with this password</div>
+        </div>
+      </div>
+
+      <!-- PERMISSIONS PANEL (custom only) -->
+      <div id="perms-panel" style="display:none;background:var(--surface2);border-radius:var(--radius-lg);padding:1rem;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem">Page Access</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem">
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:14px"><input type="checkbox" id="p-dashboard" checked style="width:16px;height:16px;accent-color:var(--pink)"> 📊 Dashboard</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:14px"><input type="checkbox" id="p-receiving" checked style="width:16px;height:16px;accent-color:var(--pink)"> 📥 Receiving</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:14px"><input type="checkbox" id="p-production" checked style="width:16px;height:16px;accent-color:var(--pink)"> 🖨 Production</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:14px"><input type="checkbox" id="p-shipping" checked style="width:16px;height:16px;accent-color:var(--pink)"> 🚚 Shipping</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:14px"><input type="checkbox" id="p-reports" checked style="width:16px;height:16px;accent-color:var(--pink)"> 📄 Reports</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:14px"><input type="checkbox" id="p-shirts" checked style="width:16px;height:16px;accent-color:var(--pink)"> 👕 Shirts</label>
+        </div>
+        <div style="font-size:12px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem">Actions</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem">
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:14px"><input type="checkbox" id="p-add" checked style="width:16px;height:16px;accent-color:var(--pink)"> ➕ Add / Create</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:14px"><input type="checkbox" id="p-edit" checked style="width:16px;height:16px;accent-color:var(--pink)"> ✏ Edit / Update</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:14px"><input type="checkbox" id="p-delete" style="width:16px;height:16px;accent-color:var(--pink)"> 🗑 Delete</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:14px"><input type="checkbox" id="p-defects" checked style="width:16px;height:16px;accent-color:var(--pink)"> ⚠ Record Defects</label>
+        </div>
+        <div style="font-size:12px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem">Customer Access <span style="font-weight:400;text-transform:none;color:var(--ink3)">(leave all checked = see all)</span></div>
+        <div id="cust-perms" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:180px;overflow-y:auto"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('add-user')">Cancel</button>
+      <button class="btn btn-pink" style="padding:12px 28px" onclick="saveUser()">Save User</button>
     </div>
   </div>
 </div>
@@ -2321,16 +2387,187 @@ async function saveShipping(){
 
 // ═══════ USERS ═══════
 async function loadUsers(){
-  const snap=await db.collection('users').orderBy('createdAt').get();
-  const list=document.getElementById('users-list');
-  list.innerHTML=snap.docs.map(function(d){var u=Object.assign({id:d.id},d.data());const ini=(u.name||u.email||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();const isMe=u.id===(currentUser&&currentUser.uid);
-    return`<div class="urow"><div class="uav">${ini}</div>
-      <div style="flex:1"><div style="font-weight:500;font-size:14px">${u.name||'—'} ${isMe?'<span style="font-size:11px;color:var(--ink3)">(you)</span>':''}</div>
-      <div style="font-size:12px;color:var(--ink3)">${u.email}</div></div>
-      <span class="badge ${u.role==='admin'?'b-teal':'b-gray'}">${u.role||'staff'}</span>
-    </div>`;
-  }).join('')||'<div style="color:var(--ink3);font-style:italic">No users found.</div>';
+  try{
+    var snap = await db.collection('users').get();
+    var list = [];
+    snap.docs.forEach(function(d){ list.push(Object.assign({id:d.id},d.data())); });
+    list.sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); });
+    renderUsers(list);
+  }catch(e){ toast('Error loading users: '+e.message,'err'); }
 }
+
+function renderUsers(list){
+  var container = document.getElementById('users-list');
+  if(!container) return;
+  if(!list||!list.length){
+    container.innerHTML='<div style="text-align:center;padding:3rem;color:var(--ink3)">No users yet. Click + Add User to get started.</div>';
+    return;
+  }
+  container.innerHTML = list.map(function(u){
+    var role = u.role||'staff';
+    var roleColor = role==='admin'?'var(--pink)':role==='custom'?'#5b5bd6':'var(--teal)';
+    var roleLabel = role==='admin'?'Admin':role==='custom'?'Custom':'Staff';
+    var perms = u.permissions||{};
+    var permTags = '';
+    if(role==='admin'){
+      permTags = '<span style="padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;background:var(--pink2);color:var(--pink)">Full Access</span>';
+    } else if(role==='staff'){
+      permTags = '<span style="padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;background:var(--teal2);color:var(--teal)">View + Add + Edit</span> <span style="padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;background:var(--surface2);color:var(--ink3)">No Delete</span>';
+    } else {
+      var tags = [];
+      var pageMap = {dashboard:'Dashboard',receiving:'Receiving',production:'Production',shipping:'Shipping',reports:'Reports',shirts:'Shirts'};
+      for(var k in pageMap){ if(perms[k]!==false) tags.push(pageMap[k]); }
+      if(perms.add!==false) tags.push('Add');
+      if(perms.edit!==false) tags.push('Edit');
+      if(perms.delete===true) tags.push('Delete');
+      if(perms.defects!==false) tags.push('Defects');
+      permTags = tags.map(function(t){ return '<span style="padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;background:var(--surface2);color:var(--ink2)">'+t+'</span>'; }).join(' ');
+    }
+    var custLine = '';
+    if(u.allowedCustomers&&u.allowedCustomers.length>0){
+      custLine = '<div style="margin-top:6px;font-size:12px;color:var(--ink3)">👥 Customers: '+u.allowedCustomers.join(', ')+'</div>';
+    }
+    var lastEdit = u.updatedAt ? '<div style="font-size:12px;color:var(--ink4);margin-top:4px">Last edited: '+new Date(u.updatedAt.seconds*1000).toLocaleString()+(u.updatedByName?' by '+u.updatedByName:'')+'</div>' : '';
+    var isSelf = currentUser&&u.id===currentUser.uid;
+    return '<div class="card" style="margin-bottom:1rem;padding:1.25rem">'+
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap">'+
+        '<div style="display:flex;align-items:center;gap:12px">'+
+          '<div style="width:48px;height:48px;border-radius:50%;background:var(--pink);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;flex-shrink:0">'+( u.name||u.email||'?')[0].toUpperCase()+'</div>'+
+          '<div>'+
+            '<div style="font-size:18px;font-weight:700">'+( u.name||'Unknown')+(isSelf?' <span style="font-size:12px;color:var(--ink3)">(you)</span>':'')+'</div>'+
+            '<div style="font-size:14px;color:var(--ink3)">'+( u.email||'')+'</div>'+
+            '<span style="display:inline-block;margin-top:4px;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;background:'+roleColor+'20;color:'+roleColor+'">'+roleLabel+'</span>'+
+          '</div>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;flex-shrink:0">'+
+          '<button class="btn btn-sm btn-ghost" data-uid="'+u.id+'" onclick="editUser(this.dataset.uid)">✏ Edit</button>'+
+          (!isSelf?'<button class="btn btn-sm btn-danger" data-uid="'+u.id+'" data-name="'+(u.name||'')+'" onclick="deleteUser(this.dataset.uid,this.dataset.name)">Del</button>':'')+
+        '</div>'+
+      '</div>'+
+      '<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">'+permTags+'</div>'+
+      custLine+lastEdit+
+    '</div>';
+  }).join('');
+}
+
+function updatePermUI(){
+  var role = document.getElementById('au-role').value;
+  var panel = document.getElementById('perms-panel');
+  if(panel) panel.style.display = role==='custom'?'block':'none';
+  if(role==='staff'){
+    var ids=['p-dashboard','p-receiving','p-production','p-shipping','p-reports','p-shirts','p-add','p-edit','p-defects'];
+    ids.forEach(function(id){var e=document.getElementById(id);if(e)e.checked=true;});
+    var del=document.getElementById('p-delete');if(del)del.checked=false;
+  } else if(role==='admin'){
+    var ids2=['p-dashboard','p-receiving','p-production','p-shipping','p-reports','p-shirts','p-add','p-edit','p-delete','p-defects'];
+    ids2.forEach(function(id){var e=document.getElementById(id);if(e)e.checked=true;});
+  }
+  // Populate customer checkboxes
+  var custBox = document.getElementById('cust-perms');
+  if(custBox){
+    var custs = customerList.length>0?customerList:[];
+    if(!custs.length){ allShipments.forEach(function(s){if(s.customer&&custs.indexOf(s.customer)<0)custs.push(s.customer);}); }
+    custBox.innerHTML = custs.map(function(c){
+      return '<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:6px 8px;border-radius:var(--radius);border:1px solid var(--border)">'+
+        '<input type="checkbox" class="cust-perm" value="'+c+'" checked style="width:14px;height:14px;accent-color:var(--pink)"> '+c+'</label>';
+    }).join('');
+  }
+}
+
+function openAddUser(){
+  document.getElementById('add-user-title').textContent='Add User';
+  sv('au-uid','');sv('au-name','');sv('au-email','');sv('au-password','');
+  document.getElementById('au-role').value='staff';
+  document.getElementById('au-pw-wrap').style.display='block';
+  updatePermUI();
+  var m=document.getElementById('modal-add-user');
+  if(m){m.style.display='flex';m.classList.add('open');}
+}
+
+function editUser(uid){
+  db.collection('users').doc(uid).get().then(function(doc){
+    if(!doc.exists) return;
+    var u=Object.assign({id:doc.id},doc.data());
+    document.getElementById('add-user-title').textContent='Edit User';
+    sv('au-uid',uid);sv('au-name',u.name||'');sv('au-email',u.email||'');sv('au-password','');
+    document.getElementById('au-role').value=u.role||'staff';
+    document.getElementById('au-pw-wrap').style.display='none';
+    updatePermUI();
+    if(u.role==='custom'&&u.permissions){
+      var pm=u.permissions;
+      var map={'p-dashboard':'dashboard','p-receiving':'receiving','p-production':'production','p-shipping':'shipping','p-reports':'reports','p-shirts':'shirts','p-add':'add','p-edit':'edit','p-delete':'delete','p-defects':'defects'};
+      for(var elId in map){var el=document.getElementById(elId);if(el)el.checked=pm[map[elId]]!==false;}
+      document.getElementById('p-delete').checked=pm.delete===true;
+    }
+    if(u.allowedCustomers&&u.allowedCustomers.length>0){
+      document.querySelectorAll('.cust-perm').forEach(function(cb){cb.checked=u.allowedCustomers.indexOf(cb.value)>=0;});
+    }
+    var m=document.getElementById('modal-add-user');
+    if(m){m.style.display='flex';m.classList.add('open');}
+  }).catch(function(e){toast('Error: '+e.message,'err');});
+}
+
+async function saveUser(){
+  var uid=v('au-uid');
+  var name=v('au-name').trim();
+  var email=v('au-email').trim();
+  var role=document.getElementById('au-role').value;
+  var password=v('au-password');
+  if(!name){toast('Name is required.','err');return;}
+  if(!email){toast('Email is required.','err');return;}
+  if(!uid&&password.length<6){toast('Password must be at least 6 characters.','err');return;}
+
+  var permissions={};
+  if(role==='custom'){
+    var map2={'p-dashboard':'dashboard','p-receiving':'receiving','p-production':'production','p-shipping':'shipping','p-reports':'reports','p-shirts':'shirts','p-add':'add','p-edit':'edit','p-delete':'delete','p-defects':'defects'};
+    for(var elId2 in map2){var el2=document.getElementById(elId2);permissions[map2[elId2]]=el2?el2.checked:true;}
+    permissions.delete=document.getElementById('p-delete')?document.getElementById('p-delete').checked:false;
+  }
+
+  var allowedCustomers=[];
+  var allCustCbs=document.querySelectorAll('.cust-perm');
+  var checkedCustCbs=document.querySelectorAll('.cust-perm:checked');
+  if(role==='custom'&&allCustCbs.length>0&&checkedCustCbs.length<allCustCbs.length){
+    checkedCustCbs.forEach(function(cb){allowedCustomers.push(cb.value);});
+  }
+
+  try{
+    var userData={
+      'name':name,
+      'email':email,
+      'role':role,
+      'permissions':permissions,
+      'allowedCustomers':allowedCustomers,
+      'updatedAt':firebase.firestore.FieldValue.serverTimestamp(),
+      'updatedByName':currentProfile?currentProfile.name:''
+    };
+    if(uid){
+      await db.collection('users').doc(uid).update(userData);
+      await logAct('Updated user: '+name+' ('+role+')');
+      toast('User updated!','ok');
+    } else {
+      userData.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+      userData.tempPassword=password;
+      userData.status='pending';
+      await db.collection('users').add(userData);
+      await logAct('Added user: '+name+' ('+role+')');
+      toast('User added! Share email: '+email+' and password with them.','ok');
+    }
+    closeModal('add-user');
+    loadUsers();
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
+async function deleteUser(uid,name){
+  if(!confirm('Delete "'+name+'"? This cannot be undone.')) return;
+  try{
+    await db.collection('users').doc(uid).delete();
+    await logAct('Deleted user: '+name);
+    toast('User deleted.','ok');
+    loadUsers();
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
 
 // ═══════ LOG ═══════
 async function loadLog(){

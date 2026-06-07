@@ -1601,12 +1601,14 @@ function nav(page){
 
 // ═══════ DATA ═══════
 async function fetchAll(){
-  const [ss,os]=await Promise.all([
+  var results = await Promise.all([
     db.collection('shipments').orderBy('createdAt','desc').get(),
     db.collection('orders').orderBy('createdAt','desc').get()
   ]);
-  allShipments=ss.docs.map(function(d){return Object.assign({id:d.id},d.data());});
-  allOrders=os.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+  var ss = results[0];
+  var os = results[1];
+  allShipments = ss.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+  allOrders = os.docs.map(function(d){return Object.assign({id:d.id},d.data());});
 }
 function sparesUsed(sid){return allOrders.filter(o=>o.shipmentId===sid).reduce((a,o)=>a+(o.sparesUsed||0),0);}
 function onRack(s){const p=allOrders.filter(o=>o.shipmentId===s.id&&(o.status==='completed'||o.status==='spare_used')).reduce((a,o)=>a+(o.qty||0),0);return Math.max(0,(s.shirts||0)-p);}
@@ -1687,10 +1689,11 @@ async function loadDashboard(){
 // ═══════ SHIPMENTS ═══════
 async function loadShipments(){await fetchAll();renderShipments();}
 function renderShipments(){
-  const q=(document.getElementById('ship-q')||{value:''}).value.toLowerCase();
-  const tbody=document.getElementById('ship-tbody');if(!tbody)return;
-  const isAdmin=((currentProfile&&currentProfile.role)||'staff')==='admin';
-  tbody.innerHTML=allShipments.filter(s=>s.customer.toLowerCase().includes(q)||s.ref.toLowerCase().includes(q)).map(s=>{
+  var q=(document.getElementById('ship-q')||{value:''}).value.toLowerCase();
+  var tbody=document.getElementById('ship-tbody');if(!tbody)return;
+  var isAdmin=((currentProfile&&currentProfile.role)||'staff')==='admin';
+  var sorted=allShipments.filter(function(s){return (s.customer||'').toLowerCase().includes(q)||(s.ref||'').toLowerCase().includes(q);}).sort(function(a,b){return (parseInt((a.ref||'').replace(/[^0-9]/g,''))||0)-(parseInt((b.ref||'').replace(/[^0-9]/g,''))||0);});
+  tbody.innerHTML=sorted.map(function(s){
     const used=sparesUsed(s.id),left=(s.spares||0)-used;
     return`<tr>
       <td style="text-align:center;padding:8px">

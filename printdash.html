@@ -1571,8 +1571,8 @@ async function loadProfile(){
 }
 
 function launchApp(){
-  const name=currentProfile?.name||currentUser.email||'User';
-  const role=currentProfile?.role||'staff';
+  const name=(currentProfile&&currentProfile.name)||currentUser.email||'User';
+  const role=(currentProfile&&currentProfile.role)||'staff';
   const ini=name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
   document.getElementById('top-av').textContent=ini;
   document.getElementById('top-name').textContent=name;
@@ -1591,8 +1591,8 @@ function launchApp(){
 
 // ═══════ NAV ═══════
 function nav(page){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.topbar-nav button').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.topbar-nav button').forEach(function(b){b.classList.remove('active');});
   document.getElementById('page-'+page).classList.add('active');
   const nb=document.getElementById('nav-'+page);if(nb)nb.classList.add('active');
   const loaders={dashboard:loadDashboard,shipments:loadShipments,orders:loadOrders,shipping:loadShipping,inventory:loadInventory,reports:loadReports,users:loadUsers,log:loadLog,shirts:loadShirts};
@@ -1605,8 +1605,8 @@ async function fetchAll(){
     db.collection('shipments').orderBy('createdAt','desc').get(),
     db.collection('orders').orderBy('createdAt','desc').get()
   ]);
-  allShipments=ss.docs.map(d=>({id:d.id,...d.data()}));
-  allOrders=os.docs.map(d=>({id:d.id,...d.data()}));
+  allShipments=ss.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+  allOrders=os.docs.map(function(d){return Object.assign({id:d.id},d.data());});
 }
 function sparesUsed(sid){return allOrders.filter(o=>o.shipmentId===sid).reduce((a,o)=>a+(o.sparesUsed||0),0);}
 function onRack(s){const p=allOrders.filter(o=>o.shipmentId===s.id&&(o.status==='completed'||o.status==='spare_used')).reduce((a,o)=>a+(o.qty||0),0);return Math.max(0,(s.shirts||0)-p);}
@@ -1627,7 +1627,7 @@ async function loadDashboard(){
   await fetchAll();
   // Also fetch shirts catalog totals
   const shirtSnap = await db.collection('shirts').get();
-  allShirts = shirtSnap.docs.map(d=>({id:d.id,...d.data()}));
+  allShirts = shirtSnap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
   const shirtRack = allShirts.reduce((a,s)=>
     a+(s.xs||0)+(s.s||0)+(s.m||0)+(s.l||0)+(s.xl||0)+(s.xxl||0)+(s.xxxl||0), 0);
 
@@ -1689,7 +1689,7 @@ async function loadShipments(){await fetchAll();renderShipments();}
 function renderShipments(){
   const q=(document.getElementById('ship-q')||{value:''}).value.toLowerCase();
   const tbody=document.getElementById('ship-tbody');if(!tbody)return;
-  const isAdmin=(currentProfile?.role||'staff')==='admin';
+  const isAdmin=((currentProfile&&currentProfile.role)||'staff')==='admin';
   tbody.innerHTML=allShipments.filter(s=>s.customer.toLowerCase().includes(q)||s.ref.toLowerCase().includes(q)).map(s=>{
     const used=sparesUsed(s.id),left=(s.spares||0)-used;
     return`<tr>
@@ -1818,12 +1818,12 @@ async function updateShipment(){
 
 async function deleteShipment(id){
   const s=allShipments.find(x=>x.id===id);
-  if(!confirm(`Delete shipment "${s?.ref}"? All linked orders will also be deleted.`))return;
+  if(!confirm(`Delete shipment "${(s&&s.ref)}"? All linked orders will also be deleted.`))return;
   try{
     const linked=allOrders.filter(o=>o.shipmentId===id);
     await Promise.all(linked.map(o=>db.collection('orders').doc(o.id).delete()));
     await db.collection('shipments').doc(id).delete();
-    await logAct('Deleted shipment '+s?.ref);toast('Deleted.','ok');await loadShipments();
+    await logAct('Deleted shipment '+(s&&s.ref));toast('Deleted.','ok');await loadShipments();
   }catch(e){toast(e.message,'err');}
 }
 
@@ -1924,7 +1924,7 @@ async function saveOrder(){
   try{
     await db.collection('orders').add({shipmentId:shipmentId,qty:qty,status:v('mo-status'),sparesUsed:parseInt(v('mo-spares'))||0,defects:parseInt(v('mo-defects'))||0,notes:v('mo-notes'),createdBy:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     const s=allShipments.find(x=>x.id===shipmentId);
-    await logAct(`Created order for ${s?.customer||'?'} qty:${qty}`);
+    await logAct(`Created order for ${(s&&s.customer)||'?'} qty:${qty}`);
     toast('Order saved!','ok');closeModal('order');
     sv('mo-notes','');sv('mo-qty','');sv('mo-spares','0');sv('mo-defects','0');
     await loadOrders();
@@ -1935,7 +1935,7 @@ function openUpdOrder(id){
   const o=allOrders.find(x=>x.id===id);if(!o)return;
   const s=allShipments.find(x=>x.id===o.shipmentId);
   sv('uo-id',id);
-  document.getElementById('uo-info').innerHTML=`<strong>${s?.customer||'—'}</strong> · Shipment ${s?.ref||'—'} · Qty: ${o.qty}`;
+  document.getElementById('uo-info').innerHTML=`<strong>${(s&&s.customer)||'—'}</strong> · Shipment ${(s&&s.ref)||'—'} · Qty: ${o.qty}`;
   document.getElementById('uo-status').value=o.status;
   sv('uo-spares',o.sparesUsed||0);sv('uo-defects',o.defects||0);sv('uo-notes',o.notes||'');
   openModal('upd');
@@ -2160,7 +2160,7 @@ function renderReports(){
 async function loadUsers(){
   const snap=await db.collection('users').orderBy('createdAt').get();
   const list=document.getElementById('users-list');
-  list.innerHTML=snap.docs.map(d=>{const u={id:d.id,...d.data()};const ini=(u.name||u.email||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();const isMe=u.id===currentUser?.uid;
+  list.innerHTML=snap.docs.map(d=>{const u={id:d.id,...d.data()};const ini=(u.name||u.email||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();const isMe=u.id===(currentUser&&currentUser.uid);
     return`<div class="urow"><div class="uav">${ini}</div>
       <div style="flex:1"><div style="font-weight:500;font-size:14px">${u.name||'—'} ${isMe?'<span style="font-size:11px;color:var(--ink3)">(you)</span>':''}</div>
       <div style="font-size:12px;color:var(--ink3)">${u.email}</div></div>
@@ -2175,12 +2175,12 @@ async function loadLog(){
   const list=document.getElementById('log-list');
   list.innerHTML=snap.docs.map(d=>{const l=d.data();return`<div class="log-item"><div class="log-dot"></div>
     <div style="flex:1;font-size:13px"><strong>${l.userName||'System'}</strong> — ${l.action}</div>
-    <div style="font-size:11px;color:var(--ink4);white-space:nowrap">${l.createdAt?.toDate?l.createdAt.toDate().toLocaleString():''}</div>
+    <div style="font-size:11px;color:var(--ink4);white-space:nowrap">${l.(createdAt&&createdAt.toDate)?l.createdAt.toDate().toLocaleString():''}</div>
   </div>`;}).join('')||'<div style="color:var(--ink3);font-style:italic">No activity yet.</div>';
 }
 
 async function logAct(action){
-  try{await db.collection('activity_log').add({userName:currentProfile?.name||'?',action,createdAt:firebase.firestore.FieldValue.serverTimestamp()});}catch{}
+  try{await db.collection('activity_log').add({userName:(currentProfile&&currentProfile.name)||'?',action,createdAt:firebase.firestore.FieldValue.serverTimestamp()});}catch{}
 }
 
 
@@ -2190,7 +2190,7 @@ let allShipShirts = [];
 
 async function loadShirts(){
   const snap = await db.collection('shirts').orderBy('createdAt','desc').get();
-  allShirts = snap.docs.map(d=>({id:d.id,...d.data()}));
+  allShirts = snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
   renderShirts();
   // Add event delegation for inline size inputs
   const tbody = document.getElementById('shirt-tbody');
@@ -2221,7 +2221,7 @@ async function loadShirts(){
 function renderShirts(){
   const q=(document.getElementById('shirt-q')||{value:''}).value.toLowerCase();
   const tbody=document.getElementById('shirt-tbody');if(!tbody)return;
-  const isAdmin=(currentProfile?.role||'staff')==='admin';
+  const isAdmin=((currentProfile&&currentProfile.role)||'staff')==='admin';
   const list=allShirts.filter(s=>
     (s.name||'').toLowerCase().includes(q)||
     (s.sku||'').toLowerCase().includes(q)||
@@ -2312,10 +2312,10 @@ async function saveShirt(){
 
 async function deleteShirt(id){
   const s=allShirts.find(x=>x.id===id);
-  if(!confirm(`Delete "${s?.name}"?`))return;
+  if(!confirm(`Delete "${(s&&s.name)}"?`))return;
   try{
     await db.collection('shirts').doc(id).delete();
-    await logAct('Deleted shirt: '+s?.name);
+    await logAct('Deleted shirt: '+(s&&s.name));
     toast('Deleted.','ok');
     await loadShirts();
   }catch(e){toast(e.message,'err');}
@@ -2329,7 +2329,7 @@ async function openShipShirts(shipId){
   document.getElementById('ss-title').textContent=`Shirt Breakdown — ${ship.ref} (${ship.customer})`;
   // Load existing breakdown
   const snap=await db.collection('shipment_shirts').where('shipmentId','==',shipId).get();
-  const existing=snap.docs.map(d=>({id:d.id,...d.data()}));
+  const existing=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
   renderShipShirtRows(existing);
   openModal('ship-shirts');
 }
@@ -3204,7 +3204,7 @@ async function printAllLabels(){
 
   // Always fetch ALL shipments fresh from Firebase
   const snap = await db.collection('shipments').orderBy('createdAt','desc').get();
-  const allSOs = snap.docs.map(d=>({id:d.id,...d.data()}));
+  const allSOs = snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
 
   if(!allSOs.length){ toast('No shipments found.','err'); return; }
 
@@ -3582,7 +3582,7 @@ function downloadQR(){
   const canvas = document.querySelector('#qr-code-container canvas');
   if(!canvas){ toast('QR not ready yet, try again','err'); return; }
   const link = document.createElement('a');
-  link.download = (currentQRShip?.ref||'qr') + '_qr.png';
+  link.download = ((currentQRShip&&currentQRShip.ref)||'qr') + '_qr.png';
   link.href = canvas.toDataURL();
   link.click();
   toast('QR downloaded!','ok');
@@ -3751,7 +3751,7 @@ async function savePrintStatus(){
     // Update local cache
     const ship = allShipments.find(s=>s.id===shipId);
     if(ship){ship.printStatus=finalStatus;ship.printProgress=printProgress;}
-    await logAct(`Updated print status for ${ship?.ref}: ${finalStatus}`);
+    await logAct(`Updated print status for ${(ship&&ship.ref)}: ${finalStatus}`);
     toast('Print status saved!','ok');
     closeModal('print-status');
     await loadShipments();
@@ -3862,7 +3862,7 @@ async function openDefectModal(shipId){
   // Load existing defects
   try{
     const snap = await db.collection('defects').where('shipmentId','==',shipId).get();
-    const existing = snap.docs.map(d=>({id:d.id,...d.data()}));
+    const existing = snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
     const insp = existing.find(d=>d.type==='inspection');
     const prnt = existing.find(d=>d.type==='print');
 

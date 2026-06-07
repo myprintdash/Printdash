@@ -379,9 +379,9 @@ tbody tr:hover td{background:var(--surface2)}
 <div class="mobile-menu" id="mobile-menu" onclick="closeMobileMenu()">
   <div class="mobile-nav" onclick="event.stopPropagation()">
     <button onclick="mobileNav('dashboard')" id="mnav-dashboard">📊 Dashboard</button>
-    <button onclick="mobileNav('shipments')" id="mnav-shipments">📦 Shipments</button>
+    <button onclick="mobileNav('shipments')" id="mnav-shipments">📥 Receiving</button>
     <button onclick="mobileNav('orders')" id="mnav-orders">🖨 Production</button>
-    <button onclick="mobileNav('inventory')" id="mnav-inventory">📋 Inventory</button>
+    <button onclick="mobileNav('shipping')" id="mnav-shipping">🚚 Shipping</button>
     <button onclick="mobileNav('reports')" id="mnav-reports">📄 Reports</button>
     <button onclick="mobileNav('shirts')" id="mnav-shirts">👕 Shirts</button>
     <div class="nav-divider" id="mnav-admin-divider" style="display:none"></div>
@@ -446,7 +446,7 @@ tbody tr:hover td{background:var(--surface2)}
     <!-- SHIPMENTS -->
     <div id="page-shipments" class="page">
       <div class="page-header">
-        <div class="page-title">Shipments <small>All customer shirt deliveries</small></div>
+        <div class="page-title">Receiving <small>Log incoming customer shirt deliveries</small></div>
         <div class="page-actions no-print filters">
           <input class="search-input" placeholder="Search customer or ref…" id="ship-q" oninput="renderShipments()">
           <button class="btn btn-pink btn-sm" onclick="openModal('ship')">+ New Shipment</button>
@@ -552,6 +552,41 @@ tbody tr:hover td{background:var(--surface2)}
       <div class="card" style="padding:0"><div class="table-wrap"><table>
         <thead><tr><th>Shirt Name</th><th>SKU</th><th>Color</th><th>XS</th><th>S</th><th>M</th><th>L</th><th>XL</th><th>2XL</th><th>3XL</th><th>Total</th><th>Notes</th><th class="no-print"></th></tr></thead>
         <tbody id="shirt-tbody"></tbody>
+      </table></div></div>
+    </div>
+
+    <!-- SHIPPING PAGE -->
+    <div id="page-shipping" class="page">
+      <div class="page-header">
+        <div class="page-title">Shipping <small>Ship completed orders back to customers</small></div>
+        <div class="page-actions no-print filters">
+          <input class="search-input" placeholder="Search SO or customer…" id="ship-out-q" oninput="renderShipping()">
+          <select class="filter-sel" id="ship-out-f" onchange="renderShipping()">
+            <option value="">All statuses</option>
+            <option value="ready">Ready to Ship</option>
+            <option value="shipped">Shipped</option>
+            <option value="pickup">Customer Pickup</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div id="shipping-metrics" class="metrics" style="margin-bottom:1.5rem"></div>
+
+      <div class="card" style="padding:0"><div class="table-wrap"><table>
+        <thead><tr>
+          <th>SO Ref</th>
+          <th>Customer</th>
+          <th>Shirts</th>
+          <th>Print Status</th>
+          <th>Carrier</th>
+          <th>Tracking #</th>
+          <th>BOL #</th>
+          <th>Ship Date</th>
+          <th>Status</th>
+          <th class="no-print"></th>
+        </tr></thead>
+        <tbody id="shipping-tbody"></tbody>
       </table></div></div>
     </div>
   </main>
@@ -943,6 +978,77 @@ tbody tr:hover td{background:var(--surface2)}
     </div>
   </div>
 </div>
+
+<!-- MODAL: SHIP ORDER -->
+<div class="overlay" id="modal-ship-out">
+  <div class="modal" style="width:min(560px,100%)">
+    <div class="modal-header">
+      <div class="modal-title">🚚 Ship Order</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('ship-out')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="so-shipid">
+      <div id="so-ship-info" style="background:var(--surface2);border-radius:var(--radius);padding:10px 14px;font-size:14px;margin-bottom:1.25rem;font-weight:600"></div>
+
+      <!-- Carrier selection -->
+      <div class="fgrp" style="margin-bottom:16px">
+        <label>Carrier / Method *</label>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px" id="carrier-options">
+          <label id="carrier-ups-lbl" style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:15px;font-weight:600" onclick="selectCarrier('UPS')">
+            <input type="radio" name="carrier" value="UPS" style="display:none">
+            <span style="font-size:22px">🟤</span> UPS
+          </label>
+          <label id="carrier-fedex-lbl" style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:15px;font-weight:600" onclick="selectCarrier('FedEx')">
+            <input type="radio" name="carrier" value="FedEx" style="display:none">
+            <span style="font-size:22px">🟣</span> FedEx
+          </label>
+          <label id="carrier-usps-lbl" style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:15px;font-weight:600" onclick="selectCarrier('USPS')">
+            <input type="radio" name="carrier" value="USPS" style="display:none">
+            <span style="font-size:22px">🔵</span> USPS
+          </label>
+          <label id="carrier-pickup-lbl" style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:15px;font-weight:600" onclick="selectCarrier('Pickup')">
+            <input type="radio" name="carrier" value="Pickup" style="display:none">
+            <span style="font-size:22px">🤝</span> Customer Pickup
+          </label>
+        </div>
+      </div>
+
+      <!-- Tracking + BOL -->
+      <div class="form-row" style="margin-bottom:16px" id="tracking-fields">
+        <div class="fgrp">
+          <label>Tracking Number</label>
+          <input type="text" id="so-tracking" placeholder="e.g. 1Z999AA10123456784" style="font-size:15px">
+        </div>
+        <div class="fgrp">
+          <label>BOL Number</label>
+          <input type="text" id="so-bol" placeholder="Bill of Lading #" style="font-size:15px">
+        </div>
+      </div>
+
+      <!-- Ship date -->
+      <div class="form-row" style="margin-bottom:16px">
+        <div class="fgrp">
+          <label>Ship Date *</label>
+          <input type="date" id="so-date" style="font-size:15px">
+        </div>
+        <div class="fgrp">
+          <label>Number of Boxes</label>
+          <input type="number" id="so-boxes" min="1" value="1" style="font-size:15px">
+        </div>
+      </div>
+
+      <div class="fgrp">
+        <label>Notes</label>
+        <textarea id="so-notes" rows="2" placeholder="Any shipping notes…" style="font-size:14px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('ship-out')">Cancel</button>
+      <button class="btn btn-pink" style="padding:12px 28px;font-size:16px" onclick="saveShipping()">🚚 Mark as Shipped</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <!-- MODAL: NEW SHIPMENT -->
@@ -1489,7 +1595,7 @@ function nav(page){
   document.querySelectorAll('.topbar-nav button').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   const nb=document.getElementById('nav-'+page);if(nb)nb.classList.add('active');
-  const loaders={dashboard:loadDashboard,shipments:loadShipments,orders:loadOrders,inventory:loadInventory,reports:loadReports,users:loadUsers,log:loadLog,shirts:loadShirts};
+  const loaders={dashboard:loadDashboard,shipments:loadShipments,orders:loadOrders,shipping:loadShipping,inventory:loadInventory,reports:loadReports,users:loadUsers,log:loadLog,shirts:loadShirts};
   if(loaders[page])loaders[page]();
 }
 

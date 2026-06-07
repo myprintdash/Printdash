@@ -1978,7 +1978,7 @@ async function loadInventory(){
 async function loadReports(){
   await fetchAll();
   const sel=document.getElementById('rpt-cust');const prev=sel.value;
-  const custs=[...new Set(allShipments.map(s=>s.customer))].sort();
+  var custs=Array.from(new Set(allShipments.map(s=>s.customer))].sort();
   sel.innerHTML='<option value="">All customers</option>'+custs.map(c=>`<option value="${c}"${c===prev?' selected':''}>${c}</option>`).join('');
   renderReports();
 }
@@ -2160,7 +2160,7 @@ function renderReports(){
 async function loadUsers(){
   const snap=await db.collection('users').orderBy('createdAt').get();
   const list=document.getElementById('users-list');
-  list.innerHTML=snap.docs.map(d=>{const u={id:d.id,...d.data()};const ini=(u.name||u.email||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();const isMe=u.id===(currentUser&&currentUser.uid);
+  list.innerHTML=snap.docs.map(function(d){var u=Object.assign({id:d.id},d.data());const ini=(u.name||u.email||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();const isMe=u.id===(currentUser&&currentUser.uid);
     return`<div class="urow"><div class="uav">${ini}</div>
       <div style="flex:1"><div style="font-weight:500;font-size:14px">${u.name||'—'} ${isMe?'<span style="font-size:11px;color:var(--ink3)">(you)</span>':''}</div>
       <div style="font-size:12px;color:var(--ink3)">${u.email}</div></div>
@@ -2414,7 +2414,7 @@ async function saveShipShirts(){
     const old=await db.collection('shipment_shirts').where('shipmentId','==',shipId).get();
     await Promise.all(old.docs.map(d=>d.ref.delete()));
     // Add new records
-    await Promise.all(data.map(d=>db.collection('shipment_shirts').add({...d,createdAt:firebase.firestore.FieldValue.serverTimestamp()})));
+    await Promise.all(data.map(d=>db.collection('shipment_shirts').add(Object.assign({},d,{createdAt:firebase.firestore.FieldValue.serverTimestamp()}))));
     await logAct(`Updated shirt breakdown for shipment ${shipId.slice(0,8)}`);
     toast('Shirt breakdown saved!','ok');
     closeModal('ship-shirts');
@@ -2562,7 +2562,7 @@ function getColorOptions(selected=''){
   document.querySelectorAll('#shirt-rows .color-select').forEach(sel=>{
     if(sel.value && !colors.includes(sel.value)) colors.push(sel.value);
   });
-  const unique = [...new Set(colors)].sort();
+  var unique = Array.from(new Set(colors)).sort();
   return '<option value="">— Select color —</option>' +
     unique.map(c=>`<option value="${c}"${c===selected?' selected':''}>${c}</option>`).join('') +
     '<option value="__new__">+ Add new color…</option>';
@@ -3071,7 +3071,7 @@ function openQuickDefect(){
 function renderQuickDefectList(filter=''){
   const container = document.getElementById('qd-list');
   if(!container) return;
-  const sorted = [...allShipments].sort((a,b)=>{
+  var sorted = allShipments.slice().sort((a,b)=>{
     return (parseInt((a.ref||'').replace(/[^0-9]/g,''))||0) - (parseInt((b.ref||'').replace(/[^0-9]/g,''))||0);
   });
   const filtered = filter ? sorted.filter(s=>

@@ -1130,15 +1130,18 @@ tbody tr:hover td{background:var(--surface2)}
       <div class="fgrp">
         <label style="font-size:15px">Tagging Status</label>
         <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
-          <label id="tag-opt-none" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:15px;font-weight:500" onclick="selectTag('')">
-            <input type="radio" name="tag-status" value="" style="display:none"> — Not Tagged Yet
-          </label>
-          <label id="tag-opt-ip" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:15px;font-weight:500" onclick="selectTag('in_progress')">
-            <input type="radio" name="tag-status" value="in_progress" style="display:none"> 🏷 In Progress
-          </label>
-          <label id="tag-opt-done" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:15px;font-weight:500" onclick="selectTag('done')">
-            <input type="radio" name="tag-status" value="done" style="display:none"> ✅ Tagged — Done
-          </label>
+          <button type="button" id="tag-opt-none" onclick="selectTag('')"
+            style="width:100%;padding:16px;border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:16px;font-weight:500;text-align:left;background:var(--surface);color:var(--ink)">
+            — Not Tagged Yet
+          </button>
+          <button type="button" id="tag-opt-ip" onclick="selectTag('in_progress')"
+            style="width:100%;padding:16px;border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:16px;font-weight:500;text-align:left;background:var(--surface);color:var(--ink)">
+            🏷 In Progress
+          </button>
+          <button type="button" id="tag-opt-done" onclick="selectTag('done')"
+            style="width:100%;padding:16px;border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:16px;font-weight:500;text-align:left;background:var(--surface);color:var(--ink)">
+            ✅ Tagged — Done
+          </button>
         </div>
       </div>
       <div class="fgrp" style="margin-top:1rem">
@@ -2296,19 +2299,32 @@ var selectedTagStatus = '';
 
 function selectTag(status){
   selectedTagStatus = status;
-  var opts = {'':'tag-opt-none','in_progress':'tag-opt-ip','done':'tag-opt-done'};
-  for(var k in opts){
-    var lbl = document.getElementById(opts[k]);
-    if(!lbl) continue;
-    if(k===status){
-      lbl.style.borderColor = status===''?'var(--border2)':status==='done'?'#16a34a':'#fbbf24';
-      lbl.style.background = status===''?'':status==='done'?'#f0fdf4':'#fef9c3';
-      lbl.style.fontWeight = '700';
-    } else {
-      lbl.style.borderColor = 'var(--border2)';
-      lbl.style.background = '';
-      lbl.style.fontWeight = '500';
-    }
+  var none = document.getElementById('tag-opt-none');
+  var ip   = document.getElementById('tag-opt-ip');
+  var done = document.getElementById('tag-opt-done');
+  // Reset all
+  [none,ip,done].forEach(function(b){
+    if(!b) return;
+    b.style.borderColor='var(--border2)';
+    b.style.background='var(--surface)';
+    b.style.color='var(--ink)';
+    b.style.fontWeight='500';
+  });
+  // Highlight selected
+  if(status==='' && none){
+    none.style.borderColor='var(--ink2)';
+    none.style.background='var(--surface2)';
+    none.style.fontWeight='700';
+  } else if(status==='in_progress' && ip){
+    ip.style.borderColor='#fbbf24';
+    ip.style.background='#fef9c3';
+    ip.style.color='#854d0e';
+    ip.style.fontWeight='700';
+  } else if(status==='done' && done){
+    done.style.borderColor='#16a34a';
+    done.style.background='#f0fdf4';
+    done.style.color='#16a34a';
+    done.style.fontWeight='700';
   }
 }
 

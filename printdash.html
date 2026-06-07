@@ -4111,6 +4111,17 @@ document.addEventListener('click', e=>{
   }
 });
 
+// Global error catcher
+window.onerror = function(msg, src, line, col, err){
+  document.body.innerHTML = '<div style="padding:2rem;font-family:monospace;background:#fff;color:#c00;max-width:800px;margin:2rem auto">' +
+    '<h2>JS Error (line ' + line + ')</h2>' +
+    '<p><strong>' + msg + '</strong></p>' +
+    '<p>Source: ' + src + '</p>' +
+    (err ? '<pre>' + err.stack + '</pre>' : '') +
+    '</div>';
+  return true;
+};
+
 boot();
 </script>
 </body>

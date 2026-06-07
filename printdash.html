@@ -2175,7 +2175,7 @@ async function loadLog(){
   const list=document.getElementById('log-list');
   list.innerHTML=snap.docs.map(d=>{const l=d.data();return`<div class="log-item"><div class="log-dot"></div>
     <div style="flex:1;font-size:13px"><strong>${l.userName||'System'}</strong> — ${l.action}</div>
-    <div style="font-size:11px;color:var(--ink4);white-space:nowrap">${l.(createdAt&&createdAt.toDate)?l.createdAt.toDate().toLocaleString():''}</div>
+    <div style="font-size:11px;color:var(--ink4);white-space:nowrap">${l.createdAt&&l.createdAt.toDate?l.createdAt.toDate().toLocaleString():''}</div>
   </div>`;}).join('')||'<div style="color:var(--ink3);font-style:italic">No activity yet.</div>';
 }
 

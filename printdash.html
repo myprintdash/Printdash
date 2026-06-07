@@ -1531,11 +1531,23 @@ async function loadDashboard(){
   const usp=allOrders.reduce((a,o)=>a+(o.sparesUsed||0),0);
   const done=allOrders.filter(o=>o.status==='completed'||o.status==='spare_used').length;
   const def=allShipments.reduce((a,s)=>a+(s.totalDefects||0),0);
+  // Print status counts from shipments
+  const doneShips = allShipments.filter(s=>s.printStatus==='done').length;
+  const printingShips = allShipments.filter(s=>s.printStatus==='printing').length;
+  const receivedShips = allShipments.filter(s=>!s.printStatus||s.printStatus==='received').length;
+  const totalPrintedShirts = allShipments.reduce((a,s)=>{
+    const prog=s.printProgress||{};
+    const bd=s.breakdown||[];
+    return a+bd.reduce((sum,r,i)=>sum+(prog[i]?r.total||0:0),0);
+  },0);
+  const totalShirtsAll = allShipments.reduce((a,s)=>a+(s.shirts||0),0);
+
   document.getElementById('dash-metrics').innerHTML=`
     <div class="metric"><div class="metric-label">Shirts on Rack</div><div class="metric-value">${totalRack}</div><div class="metric-sub">${rack} in production · ${shirtRack} spare stock</div></div>
-    <div class="metric m-pink"><div class="metric-label">Total Shipments</div><div class="metric-value">${allShipments.length}</div><div class="metric-sub">${allShipments.reduce((a,s)=>a+(s.shirts||0),0)} shirts total</div></div>
+    <div class="metric m-pink"><div class="metric-label">Total Shipments</div><div class="metric-value">${allShipments.length}</div><div class="metric-sub">${totalShirtsAll} shirts total</div></div>
     <div class="metric m-teal"><div class="metric-label">Spares Available</div><div class="metric-value">${shirtRack}</div><div class="metric-sub">across ${allShirts.length} colors</div></div>
-    <div class="metric"><div class="metric-label">Production Orders</div><div class="metric-value">${allOrders.length}</div><div class="metric-sub">${done} completed</div></div>
+    <div class="metric" style="border-top:3px solid var(--teal)"><div class="metric-label">Production Status</div><div class="metric-value" style="font-size:28px;display:flex;gap:12px;align-items:baseline"><span style="color:var(--teal)">${doneShips}</span><span style="font-size:16px;color:var(--ink3)">/</span><span style="color:var(--ink)">${allShipments.length}</span></div><div class="metric-sub">✅ ${doneShips} done · 🖨 ${printingShips} printing · 📦 ${receivedShips} waiting</div></div>
+    <div class="metric" style="border-top:3px solid var(--pink)"><div class="metric-label">Shirts Printed</div><div class="metric-value" style="font-size:28px;display:flex;gap:12px;align-items:baseline"><span style="color:var(--pink)">${totalPrintedShirts}</span><span style="font-size:16px;color:var(--ink3)">/</span><span style="color:var(--ink)">${totalShirtsAll}</span></div><div class="metric-sub">${totalShirtsAll>0?Math.round((totalPrintedShirts/totalShirtsAll)*100):0}% complete</div></div>
     <div class="metric m-warn"><div class="metric-label">Total Defects</div><div class="metric-value">${def}</div><div class="metric-sub">Across all orders</div></div>
   `;
   const alerts=allShipments.filter(s=>(s.spares||0)>0&&((s.spares||0)-sparesUsed(s.id))<=2);

@@ -1877,7 +1877,7 @@ function renderOrders(){
   });
 
   if(!list.length){
-    tbody.innerHTML='<tr class="empty-row"><td colspan="10">No shipments found</td></tr>';
+    tbody.innerHTML='<tr class="empty-row"><td colspan="10">No shipments found ('+allShipments.length+' total loaded)</td></tr>';
     return;
   }
 

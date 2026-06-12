@@ -2420,7 +2420,7 @@ async function renderBatches(){
       var statusColor = b.status==='closed'?'var(--ink3)':'var(--teal)';
       var statusLabel = b.status==='closed'?'Closed':'Active';
 
-      return '<div class="card" style="padding:1.25rem;border-left:4px solid '+(isActive?'var(--pink)':'var(--border2)')+';cursor:pointer" onclick="selectBatch(''+b.id+'')">'+
+      return '<div class="card" style="padding:1.25rem;border-left:4px solid '+(isActive?'var(--pink)':'var(--border2)')+';cursor:pointer" data-bid="'+b.id+'" onclick="selectBatch(this.dataset.bid)">'+
         '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">'+
           '<div style="display:flex;align-items:center;gap:12px">'+
             '<div style="font-size:32px">📁</div>'+

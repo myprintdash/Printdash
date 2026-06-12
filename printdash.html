@@ -2402,12 +2402,12 @@ async function renderBatches(){
   if(!container) return;
 
   if(!allBatches.length){
-    container.innerHTML = '<div style="text-align:center;padding:4rem;color:var(--ink3)">'+
-      '<div style="font-size:48px;margin-bottom:1rem">📁</div>'+
-      '<div style="font-size:18px;font-weight:600;margin-bottom:.5rem">No batches yet</div>'+
-      '<div style="font-size:14px;margin-bottom:1.5rem">Create a new batch each day when orders arrive</div>'+
-      '<button class="btn btn-pink" onclick="openNewBatch()">+ Create Today's Batch</button>'+
-    '</div>';
+    container.innerHTML = '<div style="text-align:center;padding:4rem;color:var(--ink3)">' +
+      '<div style="font-size:48px;margin-bottom:1rem">\u{1F4C1}</div>' +
+      '<div style="font-size:18px;font-weight:600;margin-bottom:.5rem">No batches yet</div>' +
+      '<div style="font-size:14px;margin-bottom:1.5rem">Create a new batch each day when orders arrive</div>' +
+      '<button class="btn btn-pink" onclick="openNewBatch()">+ New Batch</button>' +
+      '</div>';
     return;
   }
 

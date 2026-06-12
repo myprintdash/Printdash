@@ -352,6 +352,7 @@ tbody tr:hover td{background:var(--surface2)}
     </div>
     <nav class="topbar-nav">
       <button onclick="nav('dashboard')" id="nav-dashboard" class="active">Dashboard</button>
+      <button onclick="nav('batches')" id="nav-batches">Batches</button>
       <button onclick="nav('shipments')" id="nav-shipments">Receiving</button>
       <button onclick="nav('orders')" id="nav-orders">Production</button>
       <button onclick="nav('shipping')" id="nav-shipping">Shipping</button>
@@ -367,7 +368,7 @@ tbody tr:hover td{background:var(--surface2)}
     <div class="topbar-right">
       <div class="user-chip">
         <div class="user-av" id="top-av">?</div>
-        <button onclick="openQRScanner()" class="btn btn-sm no-print" style="background:var(--teal);color:#fff;border-color:var(--teal);margin-right:4px">📷 Scan QR</button>
+        <span id="batch-indicator" style="display:none;align-items:center;background:var(--pink2);color:var(--pink);padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700;margin-right:8px;cursor:pointer;white-space:nowrap" onclick="nav('batches')"></span><button onclick="openQRScanner()" class="btn btn-sm no-print" style="background:var(--teal);color:#fff;border-color:var(--teal);margin-right:4px">📷 Scan QR</button>
       <button onclick="openQuickDefect()" class="btn btn-sm no-print" style="background:var(--yellow-bg);color:var(--yellow);border-color:var(--yellow);margin-right:8px">⚠ Defect</button>
       <div class="user-meta"><div class="uname" id="top-name">—</div><div class="urole" id="top-role">—</div></div>
       </div>
@@ -379,6 +380,7 @@ tbody tr:hover td{background:var(--surface2)}
 <div class="mobile-menu" id="mobile-menu" onclick="closeMobileMenu()">
   <div class="mobile-nav" onclick="event.stopPropagation()">
     <button onclick="mobileNav('dashboard')" id="mnav-dashboard">📊 Dashboard</button>
+    <button onclick="mobileNav('batches')" id="mnav-batches">📁 Batches</button>
     <button onclick="mobileNav('shipments')" id="mnav-shipments">📥 Receiving</button>
     <button onclick="mobileNav('orders')" id="mnav-orders">🖨 Production</button>
     <button onclick="mobileNav('shipping')" id="mnav-shipping">🚚 Shipping</button>
@@ -595,6 +597,17 @@ tbody tr:hover td{background:var(--surface2)}
         </tr></thead>
         <tbody id="shipping-tbody"></tbody>
       </table></div></div>
+    </div>
+
+    <!-- BATCHES PAGE -->
+    <div id="page-batches" class="page">
+      <div class="page-header">
+        <div class="page-title">Batches <small>Daily work sessions</small></div>
+        <div class="page-actions no-print">
+          <button class="btn btn-pink btn-sm" onclick="openNewBatch()">+ New Batch</button>
+        </div>
+      </div>
+      <div id="batches-list"></div>
     </div>
   </main>
 </div>
@@ -1189,6 +1202,36 @@ tbody tr:hover td{background:var(--surface2)}
   </div>
 </div>
 
+
+<!-- MODAL: NEW BATCH -->
+<div class="overlay" id="modal-new-batch">
+  <div class="modal" style="width:min(460px,100%)">
+    <div class="modal-header">
+      <div class="modal-title">📁 New Daily Batch</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('new-batch')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fgrp" style="margin-bottom:14px">
+        <label>Date *</label>
+        <input type="date" id="nb-date" style="font-size:16px;padding:12px">
+      </div>
+      <div class="fgrp" style="margin-bottom:14px">
+        <label>Batch Name <span style="color:var(--ink3);font-weight:400">(optional)</span></label>
+        <input type="text" id="nb-name" placeholder="e.g. Imperial Morning Run" style="font-size:15px">
+        <div class="hint">Leave blank to use date as name</div>
+      </div>
+      <div class="fgrp">
+        <label>Notes <span style="color:var(--ink3);font-weight:400">(optional)</span></label>
+        <textarea id="nb-notes" rows="2" placeholder="Any notes about this batch…" style="font-size:14px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('new-batch')">Cancel</button>
+      <button class="btn btn-pink" style="padding:12px 28px;font-size:16px" onclick="saveBatch()">Create Batch</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <!-- MODAL: NEW SHIPMENT -->
@@ -1726,7 +1769,7 @@ function launchApp(){
   }
   document.getElementById('dash-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   document.getElementById('rpt-date').textContent=new Date().toLocaleDateString();
-  show('app');loadPresets();loadCustomers();loadDesigns();loadDashboard();setTimeout(checkQRParam,1500);
+  show('app');loadPresets();loadCustomers();loadDesigns();loadDashboard();loadBatchesInit();setTimeout(checkQRParam,1500);
 }
 
 // ═══════ NAV ═══════
@@ -1744,7 +1787,8 @@ function nav(page){
     'reports': function(){loadReports();},
     'users': function(){loadUsers();},
     'log': function(){loadLog();},
-    'shirts': function(){loadShirts();}
+    'shirts': function(){loadShirts();},
+    'batches': function(){loadBatches();}
   };
   if(loaderMap[page]) loaderMap[page]();
 }
@@ -1883,7 +1927,7 @@ async function saveShipment(){
   try{
     const spareBreakdown = getSpareBreakdown();
     const spares = spareBreakdown.reduce((a,r)=>a+r.total,0)||parseInt(document.getElementById('ms-spares')?.value)||0;
-    const docRef = await db.collection('shipments').add({customer:cust,ref:ref,date:date,shirts:shirts,spares:spares,design:fullDesign,sides:sides,breakdown:breakdown,spareBreakdown:spareBreakdown,notes:v('ms-notes'),createdBy:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    const docRef = await db.collection('shipments').add({customer:cust,ref:ref,date:date,shirts:shirts,spares:spares,design:fullDesign,sides:sides,breakdown:breakdown,spareBreakdown:spareBreakdown,notes:v('ms-notes'),batchId:activeBatchId||'',createdBy:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     await logAct(`Created shipment ${ref} — ${cust}`);
     toast('Shipment saved!','ok');closeModal('ship');
     ['ms-cust','ms-design','ms-notes'].forEach(id=>sv(id,''));sv('ms-ref','');sv('ms-spares','0');
@@ -2339,6 +2383,171 @@ function renderReports(){
 
 
 
+
+
+// ═══════ BATCHES ═══════
+var allBatches = [];
+var activeBatchId = '';
+
+async function loadBatches(){
+  try{
+    var snap = await db.collection('batches').orderBy('createdAt','desc').get();
+    allBatches = snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+    renderBatches();
+  }catch(e){ toast('Error loading batches: '+e.message,'err'); }
+}
+
+async function renderBatches(){
+  var container = document.getElementById('batches-list');
+  if(!container) return;
+
+  if(!allBatches.length){
+    container.innerHTML = '<div style="text-align:center;padding:4rem;color:var(--ink3)">'+
+      '<div style="font-size:48px;margin-bottom:1rem">📁</div>'+
+      '<div style="font-size:18px;font-weight:600;margin-bottom:.5rem">No batches yet</div>'+
+      '<div style="font-size:14px;margin-bottom:1.5rem">Create a new batch each day when orders arrive</div>'+
+      '<button class="btn btn-pink" onclick="openNewBatch()">+ Create Today's Batch</button>'+
+    '</div>';
+    return;
+  }
+
+  // Load shipment counts per batch
+  container.innerHTML = '<div style="display:flex;flex-direction:column;gap:12px">' +
+    allBatches.map(function(b){
+      var date = b.date || (b.createdAt ? new Date(b.createdAt.seconds*1000).toLocaleDateString() : '—');
+      var name = b.name || ('Batch — '+date);
+      var isActive = b.id === activeBatchId;
+      var statusColor = b.status==='closed'?'var(--ink3)':'var(--teal)';
+      var statusLabel = b.status==='closed'?'Closed':'Active';
+
+      return '<div class="card" style="padding:1.25rem;border-left:4px solid '+(isActive?'var(--pink)':'var(--border2)')+';cursor:pointer" onclick="selectBatch(''+b.id+'')">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">'+
+          '<div style="display:flex;align-items:center;gap:12px">'+
+            '<div style="font-size:32px">📁</div>'+
+            '<div>'+
+              '<div style="font-size:18px;font-weight:700;color:'+(isActive?'var(--pink)':'var(--ink)')+'">'+name+'</div>'+
+              '<div style="font-size:13px;color:var(--ink3);margin-top:2px">'+date+(b.notes?' · '+b.notes:'')+'</div>'+
+            '</div>'+
+          '</div>'+
+          '<div style="display:flex;align-items:center;gap:10px;flex-shrink:0">'+
+            '<span id="batch-count-'+b.id+'" style="background:var(--surface2);padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600">Loading…</span>'+
+            '<span style="color:'+statusColor+';font-size:13px;font-weight:600">● '+statusLabel+'</span>'+
+            '<button class="btn btn-pink btn-sm" data-bid="'+b.id+'" onclick="event.stopPropagation();activateBatch(this.dataset.bid)">'+
+              (isActive?'✅ Active':'Set Active')+
+            '</button>'+
+            '<button class="btn btn-sm btn-ghost" data-bid="'+b.id+'" data-bst="'+(b.status||'active')+'" onclick="event.stopPropagation();toggleBatchStatus(this.dataset.bid,this.dataset.bst)">'+
+              (b.status==='closed'?'Reopen':'Close')+
+            '</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+    }).join('')+
+  '</div>';
+
+  // Load shipment counts asynchronously
+  allBatches.forEach(function(b){
+    db.collection('shipments').where('batchId','==',b.id).get().then(function(snap){
+      var el = document.getElementById('batch-count-'+b.id);
+      if(el){
+        var total = snap.docs.reduce(function(a,d){return a+(d.data().shirts||0);},0);
+        el.textContent = snap.size+' SOs · '+total+' shirts';
+      }
+    }).catch(function(){});
+  });
+}
+
+function openNewBatch(){
+  sv('nb-date', new Date().toISOString().split('T')[0]);
+  sv('nb-name','');
+  sv('nb-notes','');
+  var m=document.getElementById('modal-new-batch');
+  if(m){m.style.display='flex';m.classList.add('open');}
+}
+
+async function saveBatch(){
+  var date = v('nb-date');
+  var name = v('nb-name').trim();
+  var notes = v('nb-notes').trim();
+  if(!date){toast('Please select a date.','err');return;}
+
+  // Format date nicely for name
+  var dateObj = new Date(date+'T12:00:00');
+  var formatted = dateObj.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  var batchName = name || formatted;
+
+  try{
+    var doc = await db.collection('batches').add({
+      'date': date,
+      'name': batchName,
+      'notes': notes,
+      'status': 'active',
+      'createdAt': firebase.firestore.FieldValue.serverTimestamp(),
+      'createdBy': currentUser.uid
+    });
+    activeBatchId = doc.id;
+    localStorage.setItem('activeBatchId', doc.id);
+    await logAct('Created batch: '+batchName);
+    toast('Batch created! Now add shipments in Receiving.','ok');
+    closeModal('new-batch');
+    await loadBatches();
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
+function activateBatch(batchId){
+  activeBatchId = batchId;
+  localStorage.setItem('activeBatchId', batchId);
+  var batch = null;
+  for(var i=0;i<allBatches.length;i++){if(allBatches[i].id===batchId){batch=allBatches[i];break;}}
+  toast('Active batch: '+(batch?batch.name:''),'ok');
+  renderBatches();
+  // Update the batch indicator in topbar
+  updateBatchIndicator();
+}
+
+async function toggleBatchStatus(batchId, currentStatus){
+  var newStatus = currentStatus==='closed'?'active':'closed';
+  try{
+    await db.collection('batches').doc(batchId).update({'status':newStatus});
+    for(var i=0;i<allBatches.length;i++){if(allBatches[i].id===batchId){allBatches[i].status=newStatus;break;}}
+    if(newStatus==='closed' && batchId===activeBatchId){
+      activeBatchId='';
+      localStorage.removeItem('activeBatchId');
+      updateBatchIndicator();
+    }
+    toast('Batch '+(newStatus==='closed'?'closed':'reopened')+'!','ok');
+    renderBatches();
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
+function selectBatch(batchId){
+  activateBatch(batchId);
+}
+
+function updateBatchIndicator(){
+  var ind = document.getElementById('batch-indicator');
+  if(!ind) return;
+  if(!activeBatchId){
+    ind.style.display='none';
+    return;
+  }
+  var batch=null;
+  for(var i=0;i<allBatches.length;i++){if(allBatches[i].id===activeBatchId){batch=allBatches[i];break;}}
+  if(batch){
+    ind.style.display='flex';
+    ind.textContent='📁 '+( batch.name||batch.date);
+  }
+}
+
+async function loadBatchesInit(){
+  // Restore active batch from localStorage
+  var saved = localStorage.getItem('activeBatchId');
+  if(saved) activeBatchId = saved;
+  try{
+    var snap = await db.collection('batches').orderBy('createdAt','desc').get();
+    allBatches = snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+    updateBatchIndicator();
+  }catch(e){}
+}
 
 // ═══════ PRODUCTION NOTE ═══════
 function toggleNoteOther(){

@@ -448,13 +448,29 @@ tbody tr:hover td{background:var(--surface2)}
     <!-- SHIPMENTS -->
     <div id="page-shipments" class="page">
       <div class="page-header">
-        <div class="page-title">Receiving <small>Log incoming customer shirt deliveries</small></div>
+        <div class="page-title">Receiving <small id="recv-batch-label">Log incoming customer shirt deliveries</small></div>
         <div class="page-actions no-print filters">
           <input class="search-input" placeholder="Search customer or ref…" id="ship-q" oninput="renderShipments()">
           <button class="btn btn-pink btn-sm" onclick="openModal('ship')">+ New Shipment</button>
           <button class="btn btn-sm" onclick="printAllLabels()" style="background:#f0f0ff;color:#5b5bd6;border-color:#c4c4f8">📱 Print All QR Labels</button>
         </div>
       </div>
+      <!-- Batch filter bar -->
+      <div id="recv-batch-bar" style="display:none;background:var(--pink2);border:1.5px solid var(--pink);border-radius:var(--radius-lg);padding:12px 16px;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px">📁</span>
+          <div>
+            <div id="recv-batch-name" style="font-weight:700;font-size:15px;color:var(--pink)"></div>
+            <div id="recv-batch-date" style="font-size:13px;color:var(--ink3)"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="recv-batch-count" style="background:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;color:var(--pink)"></span>
+          <button class="btn btn-sm btn-ghost" onclick="showAllShipments()" style="border-color:var(--pink);color:var(--pink)">Show All</button>
+          <button class="btn btn-sm btn-pink" onclick="nav('batches')">Switch Batch</button>
+        </div>
+      </div>
+
       <div class="card" style="padding:0"><div class="table-wrap"><table>
         <thead><tr><th style="width:40px;text-align:center">✓</th><th>Ref</th><th>Customer</th><th>Date</th><th>Shirts In</th><th>Spares In</th><th>Spares Left</th><th>Design</th><th>Defects</th><th>Status</th><th class="no-print"></th></tr></thead>
         <tbody id="ship-tbody"></tbody>
@@ -1886,7 +1902,36 @@ function renderShipments(){
   var q=(document.getElementById('ship-q')||{value:''}).value.toLowerCase();
   var tbody=document.getElementById('ship-tbody');if(!tbody)return;
   var isAdmin=((currentProfile&&currentProfile.role)||'staff')==='admin';
-  var sorted=allShipments.filter(function(s){return (s.customer||'').toLowerCase().includes(q)||(s.ref||'').toLowerCase().includes(q);}).sort(function(a,b){return (parseInt((a.ref||'').replace(/[^0-9]/g,''))||0)-(parseInt((b.ref||'').replace(/[^0-9]/g,''))||0);});
+  // Filter by active batch if one is set, otherwise show all
+  var showAll = !activeBatchId;
+  var filtered = allShipments.filter(function(s){
+    var matchQ = !q || (s.customer||'').toLowerCase().includes(q)||(s.ref||'').toLowerCase().includes(q);
+    var matchBatch = showAll || (s.batchId===activeBatchId);
+    return matchQ && matchBatch;
+  });
+
+  // Update batch bar
+  var batchBar = document.getElementById('recv-batch-bar');
+  var batchNameEl = document.getElementById('recv-batch-name');
+  var batchDateEl = document.getElementById('recv-batch-date');
+  var batchCountEl = document.getElementById('recv-batch-count');
+  var batchLabel = document.getElementById('recv-batch-label');
+  if(activeBatchId){
+    var activeBatch = null;
+    for(var i=0;i<allBatches.length;i++){if(allBatches[i].id===activeBatchId){activeBatch=allBatches[i];break;}}
+    if(activeBatch){
+      if(batchBar) batchBar.style.display='flex';
+      if(batchNameEl) batchNameEl.textContent=activeBatch.name||activeBatch.date;
+      if(batchDateEl) batchDateEl.textContent=activeBatch.date||'';
+      if(batchCountEl) batchCountEl.textContent=filtered.length+' SOs';
+      if(batchLabel) batchLabel.textContent='Active batch: '+(activeBatch.name||activeBatch.date);
+    }
+  } else {
+    if(batchBar) batchBar.style.display='none';
+    if(batchLabel) batchLabel.textContent='All shipments';
+  }
+
+  var sorted = filtered.slice().sort(function(a,b){return (parseInt((a.ref||'').replace(/[^0-9]/g,''))||0)-(parseInt((b.ref||'').replace(/[^0-9]/g,''))||0);});
   tbody.innerHTML=sorted.map(function(s){
     const used=sparesUsed(s.id),left=(s.spares||0)-used;
     return`<tr>
@@ -2490,6 +2535,7 @@ async function saveBatch(){
     toast('Batch created! Now add shipments in Receiving.','ok');
     closeModal('new-batch');
     await loadBatches();
+    setTimeout(function(){ nav('shipments'); }, 800);
   }catch(e){toast('Error: '+e.message,'err');}
 }
 
@@ -2547,6 +2593,14 @@ async function loadBatchesInit(){
     allBatches = snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
     updateBatchIndicator();
   }catch(e){}
+}
+
+
+function showAllShipments(){
+  activeBatchId = '';
+  localStorage.removeItem('activeBatchId');
+  updateBatchIndicator();
+  renderShipments();
 }
 
 // ═══════ PRODUCTION NOTE ═══════

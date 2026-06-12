@@ -1947,8 +1947,7 @@ function loadPage(page){
 
 // ═══════ DASHBOARD ═══════
 async function loadDashboard(){
-  try{
-  await fetchAll();
+  try{ await fetchAll(); }catch(e){ toast("Load error: "+e.message,"err"); return; }
 
   // Shirt catalog totals
   var shirtSnap = await db.collection('shirts').get();
@@ -1964,8 +1963,7 @@ async function loadDashboard(){
   var batchBar = document.getElementById('dash-batch-bar');
   if(batchBar){
     try{ batchBar.innerHTML = makeBatchBar('dashboard'); }catch(e){}
-    }catch(e){ toast("Dashboard error: "+e.message,"err"); console.error("Dashboard:",e); }
-}
+  }
 
   var rack = allShipments.reduce(function(a,s){return a+onRack(s);},0);
   var def = batchShips.reduce(function(a,s){return a+(s.totalDefects||0);},0);

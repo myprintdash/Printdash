@@ -1905,6 +1905,42 @@ function badge(s){
   return`<span class="badge ${m[s]||'b-gray'}">${l[s]||s}</span>`;
 }
 
+// ═══════ BATCH FILTER HELPER ═══════
+function getBatchShipments(){
+  if(!activeBatchId) return allShipments;
+  return allShipments.filter(function(s){ return s.batchId===activeBatchId; });
+}
+
+function getBatchLabel(){
+  if(!activeBatchId) return 'All Batches';
+  for(var i=0;i<allBatches.length;i++){
+    if(allBatches[i].id===activeBatchId) return allBatches[i].name||allBatches[i].date||'Active Batch';
+  }
+  return 'Active Batch';
+}
+
+function makeBatchBar(page){
+  if(!activeBatchId) return '';
+  return '<div style="background:var(--pink2);border:1.5px solid var(--pink);border-radius:var(--radius-lg);padding:10px 16px;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'+
+    '<div style="display:flex;align-items:center;gap:8px">'+
+      '<span style="font-size:18px">📁</span>'+
+      '<span style="font-weight:700;color:var(--pink);font-size:14px">'+getBatchLabel()+'</span>'+
+    '</div>'+
+    '<div style="display:flex;gap:6px">'+
+      '<button class="btn btn-sm" onclick="showAllShipments()" style="border-color:var(--pink);color:var(--pink);font-size:12px">Show All</button>'+
+      '<button class="btn btn-sm btn-pink" onclick="nav(&quot;batches&quot;)" style="font-size:12px">Switch Batch</button>'+
+    '</div>'+
+  '</div>';
+}
+
+function loadPage(page){
+  if(page==='dashboard') loadDashboard();
+  else if(page==='orders') loadOrders();
+  else if(page==='shipping') loadShipping();
+  else if(page==='reports') loadReports();
+  else if(page==='shipments') loadShipments();
+}
+
 // ═══════ DASHBOARD ═══════
 async function loadDashboard(){
   await fetchAll();
@@ -1917,9 +1953,13 @@ async function loadDashboard(){
   },0);
 
   // Get batch-filtered shipments
-  var batchShips = getBatchShipments();
+  var batchShips = activeBatchId
+    ? allShipments.filter(function(s){return s.batchId===activeBatchId;})
+    : allShipments;
   var batchBar = document.getElementById('dash-batch-bar');
-  if(batchBar) batchBar.innerHTML = makeBatchBar('dashboard');
+  if(batchBar){
+    try{ batchBar.innerHTML = makeBatchBar('dashboard'); }catch(e){}
+  }
 
   var rack = allShipments.reduce(function(a,s){return a+onRack(s);},0);
   var def = batchShips.reduce(function(a,s){return a+(s.totalDefects||0);},0);
@@ -2750,42 +2790,6 @@ async function checkAutoArchiveBatch(){
     await loadBatchesInit();
     toast('All SOs shipped! Batch "'+batchName+'" archived.','ok');
   }catch(e){ console.error('Auto-archive error:',e); }
-}
-
-// ═══════ BATCH FILTER HELPER ═══════
-function getBatchShipments(){
-  if(!activeBatchId) return allShipments;
-  return allShipments.filter(function(s){ return s.batchId===activeBatchId; });
-}
-
-function getBatchLabel(){
-  if(!activeBatchId) return 'All Batches';
-  for(var i=0;i<allBatches.length;i++){
-    if(allBatches[i].id===activeBatchId) return allBatches[i].name||allBatches[i].date||'Active Batch';
-  }
-  return 'Active Batch';
-}
-
-function makeBatchBar(page){
-  if(!activeBatchId) return '';
-  return '<div style="background:var(--pink2);border:1.5px solid var(--pink);border-radius:var(--radius-lg);padding:10px 16px;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'+
-    '<div style="display:flex;align-items:center;gap:8px">'+
-      '<span style="font-size:18px">📁</span>'+
-      '<span style="font-weight:700;color:var(--pink);font-size:14px">'+getBatchLabel()+'</span>'+
-    '</div>'+
-    '<div style="display:flex;gap:6px">'+
-      '<button class="btn btn-sm" onclick="showAllShipments()" style="border-color:var(--pink);color:var(--pink);font-size:12px">Show All</button>'+
-      '<button class="btn btn-sm btn-pink" onclick="nav(&quot;batches&quot;)" style="font-size:12px">Switch Batch</button>'+
-    '</div>'+
-  '</div>';
-}
-
-function loadPage(page){
-  if(page==='dashboard') loadDashboard();
-  else if(page==='orders') loadOrders();
-  else if(page==='shipping') loadShipping();
-  else if(page==='reports') loadReports();
-  else if(page==='shipments') loadShipments();
 }
 
 // ═══════ BATCHES ═══════

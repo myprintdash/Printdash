@@ -1094,8 +1094,12 @@ tbody tr:hover td{background:var(--surface2)}
         <textarea id="so-notes" rows="2" placeholder="Any shipping notes…" style="font-size:14px"></textarea>
       </div>
     </div>
-    <div class="modal-footer">
+    <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
       <button class="btn" onclick="closeModal('ship-out')">Cancel</button>
+      <button class="btn btn-sm" id="btn-reset-ship" onclick="resetShipping()" 
+        style="background:var(--red-bg);color:var(--red);border-color:var(--red);display:none">
+        ↩ Reset to Not Shipped
+      </button>
       <button class="btn btn-pink" style="padding:12px 28px;font-size:16px" onclick="saveShipping()">🚚 Mark as Shipped</button>
     </div>
   </div>
@@ -1943,6 +1947,7 @@ function loadPage(page){
 
 // ═══════ DASHBOARD ═══════
 async function loadDashboard(){
+  try{
   await fetchAll();
 
   // Shirt catalog totals
@@ -1959,7 +1964,8 @@ async function loadDashboard(){
   var batchBar = document.getElementById('dash-batch-bar');
   if(batchBar){
     try{ batchBar.innerHTML = makeBatchBar('dashboard'); }catch(e){}
-  }
+    }catch(e){ toast("Dashboard error: "+e.message,"err"); console.error("Dashboard:",e); }
+}
 
   var rack = allShipments.reduce(function(a,s){return a+onRack(s);},0);
   var def = batchShips.reduce(function(a,s){return a+(s.totalDefects||0);},0);

@@ -1908,66 +1908,150 @@ function badge(s){
 // ═══════ DASHBOARD ═══════
 async function loadDashboard(){
   await fetchAll();
-  // Also fetch shirts catalog totals
-  const shirtSnap = await db.collection('shirts').get();
+
+  // Shirt catalog totals
+  var shirtSnap = await db.collection('shirts').get();
   allShirts = shirtSnap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
-  const shirtRack = allShirts.reduce((a,s)=>
-    a+(s.xs||0)+(s.s||0)+(s.m||0)+(s.l||0)+(s.xl||0)+(s.xxl||0)+(s.xxxl||0), 0);
-
-  const rack=allShipments.reduce((a,s)=>a+onRack(s),0);
-  const totalRack = rack + shirtRack;
-  const tsp=allShipments.reduce((a,s)=>a+(s.spares||0),0);
-  const usp=allOrders.reduce((a,o)=>a+(o.sparesUsed||0),0);
-  const done=allOrders.filter(o=>o.status==='completed'||o.status==='spare_used').length;
-  const def=allShipments.reduce((a,s)=>a+(s.totalDefects||0),0);
-  // Print status counts from shipments
-  const doneShips = batchShips.filter(s=>s.printStatus==='done').length;
-  const printingShips = batchShips.filter(s=>s.printStatus==='printing').length;
-  const receivedShips = batchShips.filter(s=>!s.printStatus||s.printStatus==='received').length;
-  const totalPrintedShirts = batchShips.reduce((a,s)=>{
-    const prog=s.printProgress||{};
-    const bd=s.breakdown||[];
-    return a+bd.reduce((sum,r,i)=>sum+(prog[i]?r.total||0:0),0);
+  var shirtRack = allShirts.reduce(function(a,s){
+    return a+(s.xs||0)+(s.s||0)+(s.m||0)+(s.l||0)+(s.xl||0)+(s.xxl||0)+(s.xxxl||0);
   },0);
-  const totalShirtsAll = batchShips.reduce((a,s)=>a+(s.shirts||0),0);
 
-  document.getElementById('dash-metrics').innerHTML=`
-    <div class="metric"><div class="metric-label">Shirts on Rack</div><div class="metric-value">${totalRack}</div><div class="metric-sub">${rack} in production · ${shirtRack} spare stock</div></div>
-    <div class="metric m-pink"><div class="metric-label">Total Shipments</div><div class="metric-value">${batchShips.length}</div><div class="metric-sub">${totalShirtsAll} shirts total</div></div>
-    <div class="metric m-teal"><div class="metric-label">Spares Available</div><div class="metric-value">${shirtRack}</div><div class="metric-sub">across ${allShirts.length} colors</div></div>
-    <div class="metric" style="border-top:3px solid var(--teal)"><div class="metric-label">Production Status</div><div class="metric-value" style="font-size:28px;display:flex;gap:12px;align-items:baseline"><span style="color:var(--teal)">${doneShips}</span><span style="font-size:16px;color:var(--ink3)">/</span><span style="color:var(--ink)">${allShipments.length}</span></div><div class="metric-sub">✅ ${doneShips} done · 🖨 ${printingShips} printing · 📦 ${receivedShips} waiting</div></div>
-    <div class="metric" style="border-top:3px solid var(--pink)"><div class="metric-label">Shirts Printed</div><div class="metric-value" style="font-size:28px;display:flex;gap:12px;align-items:baseline"><span style="color:var(--pink)">${totalPrintedShirts}</span><span style="font-size:16px;color:var(--ink3)">/</span><span style="color:var(--ink)">${totalShirtsAll}</span></div><div class="metric-sub">${totalShirtsAll>0?Math.round((totalPrintedShirts/totalShirtsAll)*100):0}% complete</div></div>
-    <div class="metric m-warn"><div class="metric-label">Total Defects</div><div class="metric-value">${def}</div><div class="metric-sub">Across all orders</div></div>
-  `;
-  const alerts=allShipments.filter(s=>(s.spares||0)>0&&((s.spares||0)-sparesUsed(s.id))<=2);
-  document.getElementById('dash-alerts').innerHTML=alerts.map(s=>{const r=(s.spares||0)-sparesUsed(s.id);return`<div class="alert-banner alert-warn">⚠ <strong>${s.customer}</strong> (${s.ref}) — only <strong>${r}</strong> spare shirt${r!==1?'s':''} remaining.</div>`}).join('');
-  document.getElementById('db-ship').innerHTML=allShipments.slice(0,6).map(s=>`<tr><td><strong>${s.customer}</strong></td><td class="mono">${s.ref}</td><td>${s.shirts}</td><td>${badge(shipSt(s))}</td></tr>`).join('')||`<tr class="empty-row"><td colspan="4">No shipments yet</td></tr>`;
-  document.getElementById('db-ord').innerHTML=allOrders.slice(0,6).map(o=>{const s=allShipments.find(x=>x.id===o.shipmentId);return`<tr><td>${s?s.customer:'—'}</td><td>${o.qty}</td><td>${o.sparesUsed||0}</td><td>${badge(o.status)}</td></tr>`}).join('')||`<tr class="empty-row"><td colspan="4">No orders yet</td></tr>`;
+  // Get batch-filtered shipments
+  var batchShips = getBatchShipments();
+  var batchBar = document.getElementById('dash-batch-bar');
+  if(batchBar) batchBar.innerHTML = makeBatchBar('dashboard');
 
-  // Calculate impressions
-  let shirts1=0, count1=0, shirts2=0, count2=0;
-  allShipments.forEach(s=>{
-    const shirts = s.shirts||0;
-    const side = (s.sides||s.design||'').toLowerCase();
-    if(side.includes('2-side')||side.includes('2 side')){
-      shirts2 += shirts; count2++;
-    } else {
-      shirts1 += shirts; count1++;
+  var rack = allShipments.reduce(function(a,s){return a+onRack(s);},0);
+  var def = batchShips.reduce(function(a,s){return a+(s.totalDefects||0);},0);
+
+  // Print status
+  var doneShips=0, printingShips=0, receivedShips=0, totalPrintedShirts=0, totalShirtsAll=0;
+  for(var i=0;i<batchShips.length;i++){
+    var s=batchShips[i];
+    var ps=s.printStatus||'received';
+    if(ps==='done') doneShips++;
+    else if(ps==='printing') printingShips++;
+    else receivedShips++;
+    totalShirtsAll+=(s.shirts||0);
+    var prog=s.printProgress||{};
+    var bd=s.breakdown||[];
+    for(var j=0;j<bd.length;j++){ if(prog[j]) totalPrintedShirts+=(bd[j].total||0); }
+  }
+
+  // ── IMPRESSION BREAKDOWN ──
+  // Parse design field: "1-Side Print — Left Chest" or "2-Side Print — Left Chest and Full Back"
+  var oneSideCount=0, twoSideCount=0;
+  var locationCounts={}; // e.g. {Left Chest:120, Full Back:80}
+  var oneSideShirts=0, twoSideShirts=0;
+
+  for(var k=0;k<batchShips.length;k++){
+    var ship=batchShips[k];
+    var shirts=ship.shirts||0;
+    var design=ship.design||'';
+    var sides=ship.sides||'';
+    var isTwo = sides.indexOf('2')>=0 || design.toLowerCase().indexOf('2-side')>=0;
+    if(isTwo){ twoSideCount++; twoSideShirts+=shirts; }
+    else { oneSideCount++; oneSideShirts+=shirts; }
+
+    // Parse print locations from design string
+    // Remove the "1-Side Print — " or "2-Side Print — " prefix
+    var locationStr = design.replace(/[12]-Side Print\s*[—-]\s*/i,'').trim();
+    // Split by " and " to get multiple locations
+    if(locationStr){
+      var locs = locationStr.split(/\s+and\s+/i);
+      for(var l=0;l<locs.length;l++){
+        var loc = locs[l].trim();
+        if(!loc) continue;
+        if(!locationCounts[loc]) locationCounts[loc]=0;
+        locationCounts[loc]+=shirts;
+      }
     }
-  });
-  const totalShirts = shirts1 + shirts2;
-  const totalImpressions = shirts1 + (shirts2 * 2);
+  }
 
-  const el = (id,val) => { const e=document.getElementById(id); if(e) e.textContent=val; };
-  el('imp-total-shirts', totalShirts.toLocaleString());
-  el('imp-1side-shirts', shirts1.toLocaleString());
-  el('imp-1side-count', count1+' SO'+(count1!==1?'s':''));
-  el('imp-2side-shirts', (shirts2*2).toLocaleString());
-  el('imp-2side-count', count2+' SO'+(count2!==1?'s':'')+' × 2 sides');
-  el('imp-total', totalImpressions.toLocaleString());
+  var oneSideImpressions = oneSideShirts;
+  var twoSideImpressions = twoSideShirts * 2;
+  var totalImpressions = oneSideImpressions + twoSideImpressions;
+
+  // Build location rows sorted by count
+  var locEntries = [];
+  for(var loc in locationCounts){ locEntries.push({name:loc, count:locationCounts[loc]}); }
+  locEntries.sort(function(a,b){return b.count-a.count;});
+  var locRows = locEntries.map(function(e){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border)">'+
+      '<span style="font-size:14px;font-weight:600;color:var(--ink)">'+e.name+'</span>'+
+      '<span style="font-size:16px;font-weight:800;color:var(--pink)">'+e.count.toLocaleString()+' shirts</span>'+
+    '</div>';
+  }).join('');
+
+  // Shipping status
+  var shippedCount=0, pickupCount=0, notShipped=0;
+  for(var m=0;m<batchShips.length;m++){
+    var ss=batchShips[m].shippingStatus||'';
+    if(ss==='shipped') shippedCount++;
+    else if(ss==='pickup') pickupCount++;
+    else notShipped++;
+  }
+
+  // Render metrics
+  document.getElementById('dash-metrics').innerHTML =
+    '<div class="metric"><div class="metric-label">Total SOs</div><div class="metric-value">'+batchShips.length+'</div><div class="metric-sub">'+totalShirtsAll.toLocaleString()+' shirts total</div></div>'+
+    '<div class="metric m-teal"><div class="metric-label">✅ Print Done</div><div class="metric-value" style="color:var(--teal)">'+doneShips+'</div><div class="metric-sub">'+printingShips+' printing · '+receivedShips+' waiting</div></div>'+
+    '<div class="metric m-pink"><div class="metric-label">Shirts Printed</div><div class="metric-value" style="color:var(--pink)">'+totalPrintedShirts.toLocaleString()+'</div><div class="metric-sub">of '+totalShirtsAll.toLocaleString()+' · '+(totalShirtsAll>0?Math.round(totalPrintedShirts/totalShirtsAll*100):0)+'%</div></div>'+
+    '<div class="metric"><div class="metric-label">🚚 Shipped</div><div class="metric-value" style="color:var(--teal)">'+shippedCount+'</div><div class="metric-sub">'+pickupCount+' pickup · '+notShipped+' pending</div></div>'+
+    '<div class="metric m-warn"><div class="metric-label">⚠ Defects</div><div class="metric-value">'+def+'</div><div class="metric-sub">Across all SOs</div></div>';
+
+  // Render impression summary
+  var impEl = document.getElementById('dash-impressions');
+  if(impEl) impEl.innerHTML =
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem">'+
+      '<div style="background:var(--surface);border:1.5px solid var(--border2);border-radius:var(--radius-lg);padding:1rem;text-align:center">'+
+        '<div style="font-size:12px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Total Shirts</div>'+
+        '<div style="font-size:32px;font-weight:800;color:var(--ink)">'+totalShirtsAll.toLocaleString()+'</div>'+
+        '<div style="font-size:12px;color:var(--ink3);margin-top:4px">across '+batchShips.length+' SOs</div>'+
+      '</div>'+
+      '<div style="background:var(--pink2);border:1.5px solid var(--pink);border-radius:var(--radius-lg);padding:1rem;text-align:center">'+
+        '<div style="font-size:12px;font-weight:700;color:var(--pink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">1-Side Impressions</div>'+
+        '<div style="font-size:32px;font-weight:800;color:var(--pink)">'+oneSideImpressions.toLocaleString()+'</div>'+
+        '<div style="font-size:12px;color:var(--pink3);margin-top:4px">'+oneSideCount+' SOs · 1 print each</div>'+
+      '</div>'+
+      '<div style="background:var(--teal2);border:1.5px solid var(--teal);border-radius:var(--radius-lg);padding:1rem;text-align:center">'+
+        '<div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">2-Side Impressions</div>'+
+        '<div style="font-size:32px;font-weight:800;color:var(--teal)">'+twoSideImpressions.toLocaleString()+'</div>'+
+        '<div style="font-size:12px;color:var(--teal);margin-top:4px">'+twoSideCount+' SOs · '+twoSideShirts.toLocaleString()+' shirts × 2</div>'+
+      '</div>'+
+      '<div style="background:var(--surface2);border:1.5px solid var(--border2);border-radius:var(--radius-lg);padding:1rem;text-align:center">'+
+        '<div style="font-size:12px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Total Impressions</div>'+
+        '<div style="font-size:32px;font-weight:800;color:var(--ink)">'+totalImpressions.toLocaleString()+'</div>'+
+        '<div style="font-size:12px;color:var(--ink3);margin-top:4px">1-side + (2-side × 2)</div>'+
+      '</div>'+
+    '</div>'+
+    // Print location breakdown
+    '<div style="background:var(--surface);border:1.5px solid var(--border2);border-radius:var(--radius-lg);overflow:hidden">'+
+      '<div style="padding:12px 16px;background:var(--surface2);border-bottom:1px solid var(--border2);font-size:13px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em">Print Location Breakdown</div>'+
+      (locRows||'<div style="padding:1rem;color:var(--ink3);text-align:center;font-style:italic">No design data yet</div>')+
+    '</div>';
+
+  // Recent shipments
+  var recentEl = document.getElementById('dash-recent');
+  if(recentEl){
+    var recent = batchShips.slice(0,8);
+    recentEl.innerHTML = recent.length ? recent.map(function(s){
+      var ps=s.printStatus||'received';
+      var psColor=ps==='done'?'var(--teal)':ps==='printing'?'#7a5c00':'var(--ink3)';
+      var psLabel=ps==='done'?'Done':ps==='printing'?'Printing':'Received';
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">'+
+        '<div>'+
+          '<span style="font-weight:800;color:var(--pink);font-family:var(--font-mono)">'+s.ref+'</span>'+
+          '<span style="margin-left:10px;font-size:13px;color:var(--ink2)">'+( s.shirts||0)+' shirts</span>'+
+          (s.design?'<div style="font-size:12px;color:var(--ink3);margin-top:2px">'+s.design+'</div>':'')+
+        '</div>'+
+        '<span style="font-size:13px;font-weight:700;color:'+psColor+'">'+psLabel+'</span>'+
+      '</div>';
+    }).join('') : '<div style="color:var(--ink3);font-style:italic;padding:1rem 0">No shipments in this batch</div>';
+  }
 }
 
-// ═══════ SHIPMENTS ═══════
+
 async function loadShipments(){await fetchAll();renderShipments();}
 function renderShipments(){
   var q=(document.getElementById('ship-q')||{value:''}).value.toLowerCase();

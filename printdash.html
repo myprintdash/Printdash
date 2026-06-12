@@ -596,6 +596,7 @@ tbody tr:hover td{background:var(--surface2)}
       </div>
 
       <!-- Summary -->
+      <div id="ship-batch-bar" style="margin-bottom:.5rem"></div>
       <div id="shipping-metrics" class="metrics" style="margin-bottom:1.5rem"></div>
 
       <div class="card" style="padding:0"><div class="table-wrap"><table>
@@ -1850,19 +1851,19 @@ async function loadDashboard(){
   const done=allOrders.filter(o=>o.status==='completed'||o.status==='spare_used').length;
   const def=allShipments.reduce((a,s)=>a+(s.totalDefects||0),0);
   // Print status counts from shipments
-  const doneShips = allShipments.filter(s=>s.printStatus==='done').length;
-  const printingShips = allShipments.filter(s=>s.printStatus==='printing').length;
-  const receivedShips = allShipments.filter(s=>!s.printStatus||s.printStatus==='received').length;
-  const totalPrintedShirts = allShipments.reduce((a,s)=>{
+  const doneShips = batchShips.filter(s=>s.printStatus==='done').length;
+  const printingShips = batchShips.filter(s=>s.printStatus==='printing').length;
+  const receivedShips = batchShips.filter(s=>!s.printStatus||s.printStatus==='received').length;
+  const totalPrintedShirts = batchShips.reduce((a,s)=>{
     const prog=s.printProgress||{};
     const bd=s.breakdown||[];
     return a+bd.reduce((sum,r,i)=>sum+(prog[i]?r.total||0:0),0);
   },0);
-  const totalShirtsAll = allShipments.reduce((a,s)=>a+(s.shirts||0),0);
+  const totalShirtsAll = batchShips.reduce((a,s)=>a+(s.shirts||0),0);
 
   document.getElementById('dash-metrics').innerHTML=`
     <div class="metric"><div class="metric-label">Shirts on Rack</div><div class="metric-value">${totalRack}</div><div class="metric-sub">${rack} in production · ${shirtRack} spare stock</div></div>
-    <div class="metric m-pink"><div class="metric-label">Total Shipments</div><div class="metric-value">${allShipments.length}</div><div class="metric-sub">${totalShirtsAll} shirts total</div></div>
+    <div class="metric m-pink"><div class="metric-label">Total Shipments</div><div class="metric-value">${batchShips.length}</div><div class="metric-sub">${totalShirtsAll} shirts total</div></div>
     <div class="metric m-teal"><div class="metric-label">Spares Available</div><div class="metric-value">${shirtRack}</div><div class="metric-sub">across ${allShirts.length} colors</div></div>
     <div class="metric" style="border-top:3px solid var(--teal)"><div class="metric-label">Production Status</div><div class="metric-value" style="font-size:28px;display:flex;gap:12px;align-items:baseline"><span style="color:var(--teal)">${doneShips}</span><span style="font-size:16px;color:var(--ink3)">/</span><span style="color:var(--ink)">${allShipments.length}</span></div><div class="metric-sub">✅ ${doneShips} done · 🖨 ${printingShips} printing · 📦 ${receivedShips} waiting</div></div>
     <div class="metric" style="border-top:3px solid var(--pink)"><div class="metric-label">Shirts Printed</div><div class="metric-value" style="font-size:28px;display:flex;gap:12px;align-items:baseline"><span style="color:var(--pink)">${totalPrintedShirts}</span><span style="font-size:16px;color:var(--ink3)">/</span><span style="color:var(--ink)">${totalShirtsAll}</span></div><div class="metric-sub">${totalShirtsAll>0?Math.round((totalPrintedShirts/totalShirtsAll)*100):0}% complete</div></div>
@@ -2072,12 +2073,15 @@ async function deleteShipment(id){
 // ═══════ ORDERS ═══════
 async function loadOrders(){
   await fetchAll();
+  var batchShips = getBatchShipments();
+  var batchBar = document.getElementById('prod-batch-bar');
+  if(batchBar) batchBar.innerHTML = makeBatchBar('orders');
   // Render production metrics
-  var done = allShipments.filter(function(s){return s.printStatus==='done';}).length;
-  var printing = allShipments.filter(function(s){return s.printStatus==='printing';}).length;
-  var received = allShipments.filter(function(s){return !s.printStatus||s.printStatus==='received';}).length;
-  var totalShirts = allShipments.reduce(function(a,s){return a+(s.shirts||0);},0);
-  var printedShirts = allShipments.reduce(function(a,s){
+  var done = batchShips.filter(function(s){return s.printStatus==='done';}).length;
+  var printing = batchShips.filter(function(s){return s.printStatus==='printing';}).length;
+  var received = batchShips.filter(function(s){return !s.printStatus||s.printStatus==='received';}).length;
+  var totalShirts = batchShips.reduce(function(a,s){return a+(s.shirts||0);},0);
+  var printedShirts = batchShips.reduce(function(a,s){
     var prog = s.printProgress||{};
     var bd = s.breakdown||[];
     return a + bd.reduce(function(sum,r,i){return sum+(prog[i]?r.total||0:0);},0);
@@ -2085,6 +2089,7 @@ async function loadOrders(){
   var metrics = document.getElementById('prod-metrics');
   if(metrics) metrics.innerHTML =
     '<div class="metric"><div class="metric-label">Total SOs</div><div class="metric-value">'+allShipments.length+'</div><div class="metric-sub">'+totalShirts+' shirts total</div></div>'+
+    '<div class="metric"><div class="metric-label">Total SOs</div><div class="metric-value">'+batchShips.length+'</div><div class="metric-sub">'+getBatchLabel()+'</div></div>'+
     '<div class="metric" style="border-left:3px solid var(--teal)"><div class="metric-label">✅ Done</div><div class="metric-value" style="color:var(--teal)">'+done+'</div><div class="metric-sub">Fully printed</div></div>'+
     '<div class="metric" style="border-left:3px solid var(--yellow)"><div class="metric-label">🖨 Printing</div><div class="metric-value" style="color:#7a5c00">'+printing+'</div><div class="metric-sub">In progress</div></div>'+
     '<div class="metric" style="border-left:3px solid var(--border2)"><div class="metric-label">📦 Received</div><div class="metric-value">'+received+'</div><div class="metric-sub">Not started</div></div>'+
@@ -2096,7 +2101,8 @@ function renderOrders(){
   var f=(document.getElementById('ord-f')||{value:''}).value;
   var tbody=document.getElementById('ord-tbody');if(!tbody)return;
 
-  var list = allShipments.filter(function(s){
+  var batchShipsList = getBatchShipments();
+  var list = batchShipsList.filter(function(s){
     var status = s.printStatus||'received';
     var matchQ = !q || (s.ref||'').toLowerCase().includes(q) || (s.customer||'').toLowerCase().includes(q);
     var matchF = !f || status===f;
@@ -2253,8 +2259,11 @@ async function loadReports(){
   renderReports();
 }
 function renderReports(){
+  var rptBar = document.getElementById('rpt-batch-bar');
+  if(rptBar) rptBar.innerHTML = makeBatchBar('reports');
+  var batchShips4 = getBatchShipments();
   var filter=document.getElementById('rpt-cust').value;
-  var targets=filter?allShipments.filter(function(s){return s.customer===filter;}):allShipments;
+  var targets=filter?batchShips4.filter(function(s){return s.customer===filter;}):batchShips4;
   var grouped={};
   targets.forEach(function(s){if(!grouped[s.customer])grouped[s.customer]=[];grouped[s.customer].push(s);});
   document.getElementById('rpt-date').textContent=new Date().toLocaleDateString();
@@ -2429,6 +2438,43 @@ function renderReports(){
 
 
 
+
+
+// ═══════ BATCH FILTER HELPER ═══════
+function getBatchShipments(){
+  if(!activeBatchId) return allShipments;
+  return allShipments.filter(function(s){ return s.batchId===activeBatchId; });
+}
+
+function getBatchLabel(){
+  if(!activeBatchId) return 'All Batches';
+  for(var i=0;i<allBatches.length;i++){
+    if(allBatches[i].id===activeBatchId) return allBatches[i].name||allBatches[i].date||'Active Batch';
+  }
+  return 'Active Batch';
+}
+
+function makeBatchBar(page){
+  if(!activeBatchId) return '';
+  return '<div style="background:var(--pink2);border:1.5px solid var(--pink);border-radius:var(--radius-lg);padding:10px 16px;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'+
+    '<div style="display:flex;align-items:center;gap:8px">'+
+      '<span style="font-size:18px">📁</span>'+
+      '<span style="font-weight:700;color:var(--pink);font-size:14px">'+getBatchLabel()+'</span>'+
+    '</div>'+
+    '<div style="display:flex;gap:6px">'+
+      '<button class="btn btn-sm" onclick="showAllShipments();loadPage(''+page+'')" style="border-color:var(--pink);color:var(--pink);font-size:12px">Show All</button>'+
+      '<button class="btn btn-sm btn-pink" onclick="nav('batches')" style="font-size:12px">Switch Batch</button>'+
+    '</div>'+
+  '</div>';
+}
+
+function loadPage(page){
+  if(page==='dashboard') loadDashboard();
+  else if(page==='orders') loadOrders();
+  else if(page==='shipping') loadShipping();
+  else if(page==='reports') loadReports();
+  else if(page==='shipments') loadShipments();
+}
 
 // ═══════ BATCHES ═══════
 var allBatches = [];
@@ -2738,9 +2784,12 @@ function selectCarrier(carrier){
 
 async function loadShipping(){
   try{ await fetchAll(); }catch(e){ toast('Load error: '+e.message,'err'); return; }
+  var batchBar2 = document.getElementById('ship-batch-bar');
+  if(batchBar2) batchBar2.innerHTML = makeBatchBar('shipping');
+  var batchShips2 = getBatchShipments();
   var shipped=0, pickup=0, ready=0, pending=0;
-  for(var i=0;i<allShipments.length;i++){
-    var s=allShipments[i];
+  for(var i=0;i<batchShips2.length;i++){
+    var s=batchShips2[i];
     var ss=s.shippingStatus||'';
     var ps=s.printStatus||'';
     if(ss==='shipped') shipped++;
@@ -2764,9 +2813,10 @@ function renderShipping(){
   if(!tbody){ toast('tbody missing','err'); return; }
   toast('Rendering '+allShipments.length+' shipments','ok');
 
+  var batchShips3=getBatchShipments();
   var list=[];
-  for(var i=0;i<allShipments.length;i++){
-    var s=allShipments[i];
+  for(var i=0;i<batchShips3.length;i++){
+    var s=batchShips3[i];
     var matchQ=!q||(s.ref||'').toLowerCase().includes(q)||(s.customer||'').toLowerCase().includes(q);
     var ss=s.shippingStatus||'';
     var ps=s.printStatus||'';

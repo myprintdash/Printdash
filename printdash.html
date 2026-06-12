@@ -599,8 +599,23 @@ tbody tr:hover td{background:var(--surface2)}
       <div id="ship-batch-bar" style="margin-bottom:.5rem"></div>
       <div id="shipping-metrics" class="metrics" style="margin-bottom:1.5rem"></div>
 
+      <!-- Bulk ship bar -->
+      <div id="bulk-ship-bar" style="display:none;background:var(--pink2);border:1.5px solid var(--pink);border-radius:var(--radius-lg);padding:12px 16px;margin-bottom:1rem;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div style="font-weight:700;color:var(--pink);font-size:15px">
+          <span id="bulk-count">0</span> SOs selected
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-sm btn-ghost" onclick="clearBulkSelect()">Clear</button>
+          <button class="btn btn-sm btn-pink" onclick="openBulkShip()">🚚 Ship All Selected</button>
+        </div>
+      </div>
+
       <div class="card" style="padding:0"><div class="table-wrap"><table>
         <thead><tr>
+          <th style="width:40px;text-align:center">
+            <input type="checkbox" id="ship-select-all" onchange="toggleSelectAll(this.checked)"
+              style="width:18px;height:18px;cursor:pointer;accent-color:var(--pink)">
+          </th>
           <th>SO Ref</th>
           <th>Customer</th>
           <th>Shirts</th>
@@ -1245,6 +1260,61 @@ tbody tr:hover td{background:var(--surface2)}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('new-batch')">Cancel</button>
       <button class="btn btn-pink" style="padding:12px 28px;font-size:16px" onclick="saveBatch()">Create Batch</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL: BULK SHIP -->
+<div class="overlay" id="modal-bulk-ship">
+  <div class="modal" style="width:min(520px,100%)">
+    <div class="modal-header">
+      <div class="modal-title">🚚 Bulk Ship Selected SOs</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('bulk-ship')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="bulk-so-list" style="background:var(--surface2);border-radius:var(--radius);padding:10px 14px;margin-bottom:1.25rem;max-height:150px;overflow-y:auto;font-size:14px;font-weight:600;line-height:2"></div>
+
+      <!-- Carrier -->
+      <div class="fgrp" style="margin-bottom:14px">
+        <label>Carrier / Method *</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button type="button" id="bcarrier-ups" onclick="selectBulkCarrier('UPS')"
+            style="padding:12px;border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:15px;font-weight:600;background:var(--surface)">🟤 UPS</button>
+          <button type="button" id="bcarrier-fedex" onclick="selectBulkCarrier('FedEx')"
+            style="padding:12px;border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:15px;font-weight:600;background:var(--surface)">🟣 FedEx</button>
+          <button type="button" id="bcarrier-usps" onclick="selectBulkCarrier('USPS')"
+            style="padding:12px;border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:15px;font-weight:600;background:var(--surface)">🔵 USPS</button>
+          <button type="button" id="bcarrier-pickup" onclick="selectBulkCarrier('Pickup')"
+            style="padding:12px;border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:15px;font-weight:600;background:var(--surface)">🤝 Pickup</button>
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-bottom:14px" id="bulk-tracking-fields">
+        <div class="fgrp">
+          <label>Tracking Number <span style="color:var(--ink3);font-weight:400">(optional)</span></label>
+          <input type="text" id="bulk-tracking" placeholder="e.g. 1Z999AA10123456784" style="font-size:15px">
+        </div>
+        <div class="fgrp">
+          <label>BOL Number <span style="color:var(--ink3);font-weight:400">(optional)</span></label>
+          <input type="text" id="bulk-bol" placeholder="Bill of Lading #" style="font-size:15px">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="fgrp">
+          <label>Ship Date *</label>
+          <input type="date" id="bulk-date" style="font-size:15px">
+        </div>
+        <div class="fgrp">
+          <label>Notes <span style="color:var(--ink3);font-weight:400">(optional)</span></label>
+          <input type="text" id="bulk-notes" placeholder="Any notes…" style="font-size:14px">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('bulk-ship')">Cancel</button>
+      <button class="btn btn-pink" style="padding:12px 28px;font-size:16px" id="bulk-ship-btn" onclick="saveBulkShip()">🚚 Ship All</button>
     </div>
   </div>
 </div>
@@ -2440,6 +2510,164 @@ function renderReports(){
 
 
 
+
+// ═══════ BULK SHIP ═══════
+var bulkCarrier = '';
+var selectedShipIds = [];
+
+function toggleSelectAll(checked){
+  var cbs = document.querySelectorAll('.ship-select');
+  for(var i=0;i<cbs.length;i++){ cbs[i].checked = checked; }
+  updateBulkBar();
+}
+
+function updateBulkBar(){
+  var cbs = document.querySelectorAll('.ship-select:checked');
+  selectedShipIds = [];
+  for(var i=0;i<cbs.length;i++){ selectedShipIds.push(cbs[i].dataset.sid); }
+  var bar = document.getElementById('bulk-ship-bar');
+  var cnt = document.getElementById('bulk-count');
+  if(bar) bar.style.display = selectedShipIds.length>0?'flex':'none';
+  if(cnt) cnt.textContent = selectedShipIds.length;
+}
+
+function clearBulkSelect(){
+  var cbs = document.querySelectorAll('.ship-select');
+  for(var i=0;i<cbs.length;i++){ cbs[i].checked=false; }
+  var all = document.getElementById('ship-select-all');
+  if(all) all.checked=false;
+  selectedShipIds=[];
+  var bar=document.getElementById('bulk-ship-bar');
+  if(bar) bar.style.display='none';
+}
+
+function selectBulkCarrier(carrier){
+  bulkCarrier = carrier;
+  var ids = ['ups','fedex','usps','pickup'];
+  for(var i=0;i<ids.length;i++){
+    var btn = document.getElementById('bcarrier-'+ids[i]);
+    if(!btn) continue;
+    var c = ids[i]==='ups'?'UPS':ids[i]==='fedex'?'FedEx':ids[i]==='usps'?'USPS':'Pickup';
+    if(c===carrier){
+      btn.style.borderColor='var(--pink)';btn.style.background='var(--pink2)';btn.style.color='var(--pink3)';
+    } else {
+      btn.style.borderColor='var(--border2)';btn.style.background='var(--surface)';btn.style.color='';
+    }
+  }
+  var tf=document.getElementById('bulk-tracking-fields');
+  if(tf) tf.style.display=carrier==='Pickup'?'none':'grid';
+}
+
+function openBulkShip(){
+  if(!selectedShipIds.length){ toast('No SOs selected.','err'); return; }
+  bulkCarrier='';
+  sv('bulk-tracking',''); sv('bulk-bol',''); sv('bulk-notes','');
+  sv('bulk-date', new Date().toISOString().split('T')[0]);
+  // Show selected SOs
+  var soList = document.getElementById('bulk-so-list');
+  if(soList){
+    var html='';
+    for(var i=0;i<selectedShipIds.length;i++){
+      var ship=null;
+      for(var j=0;j<allShipments.length;j++){if(allShipments[j].id===selectedShipIds[i]){ship=allShipments[j];break;}}
+      if(ship) html+='<span style="color:var(--pink);font-weight:800">'+ship.ref+'</span> &nbsp;'+ship.customer+' &nbsp;'+ship.shirts+' shirts<br>';
+    }
+    soList.innerHTML=html;
+  }
+  // Reset carriers
+  ['ups','fedex','usps','pickup'].forEach(function(id){
+    var btn=document.getElementById('bcarrier-'+id);
+    if(btn){btn.style.borderColor='var(--border2)';btn.style.background='var(--surface)';btn.style.color='';}
+  });
+  var tf=document.getElementById('bulk-tracking-fields');
+  if(tf) tf.style.display='grid';
+  var m=document.getElementById('modal-bulk-ship');
+  if(m){m.style.display='flex';m.classList.add('open');}
+}
+
+async function saveBulkShip(){
+  if(!bulkCarrier){toast('Please select a carrier.','err');return;}
+  var date=v('bulk-date');
+  if(!date){toast('Please enter a ship date.','err');return;}
+  var status=bulkCarrier==='Pickup'?'pickup':'shipped';
+  var btn=document.getElementById('bulk-ship-btn');
+  if(btn){btn.disabled=true;btn.textContent='Shipping...';}
+
+  try{
+    var promises=[];
+    for(var i=0;i<selectedShipIds.length;i++){
+      var sid=selectedShipIds[i];
+      promises.push(db.collection('shipments').doc(sid).update({
+        'carrier':bulkCarrier,
+        'trackingNumber':v('bulk-tracking'),
+        'bolNumber':v('bulk-bol'),
+        'shipDate':date,
+        'shipNotes':v('bulk-notes'),
+        'shippingStatus':status,
+        'shippedAt':firebase.firestore.FieldValue.serverTimestamp(),
+        'shippedBy':currentUser.uid
+      }));
+    }
+    await Promise.all(promises);
+
+    // Update local cache
+    for(var j=0;j<allShipments.length;j++){
+      if(selectedShipIds.indexOf(allShipments[j].id)>=0){
+        allShipments[j].carrier=bulkCarrier;
+        allShipments[j].shippingStatus=status;
+        allShipments[j].shipDate=date;
+        allShipments[j].trackingNumber=v('bulk-tracking');
+        allShipments[j].bolNumber=v('bulk-bol');
+      }
+    }
+
+    await logAct('Bulk shipped '+selectedShipIds.length+' SOs via '+bulkCarrier);
+    toast('Shipped '+selectedShipIds.length+' SOs via '+bulkCarrier+'!','ok');
+    closeModal('bulk-ship');
+    clearBulkSelect();
+
+    // Check if all SOs in active batch are now shipped → auto-archive
+    await checkAutoArchiveBatch();
+    renderShipping();
+  }catch(e){
+    toast('Error: '+e.message,'err');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='🚚 Ship All';}
+  }
+}
+
+// ═══════ AUTO-ARCHIVE BATCH ═══════
+async function checkAutoArchiveBatch(){
+  if(!activeBatchId) return;
+  // Get all SOs in this batch
+  var batchSOs = allShipments.filter(function(s){return s.batchId===activeBatchId;});
+  if(!batchSOs.length) return;
+  // Check if ALL are shipped or pickup
+  var allShipped = batchSOs.every(function(s){
+    return s.shippingStatus==='shipped'||s.shippingStatus==='pickup';
+  });
+  if(!allShipped) return;
+
+  // Auto-archive the batch
+  try{
+    var batch=null;
+    for(var i=0;i<allBatches.length;i++){if(allBatches[i].id===activeBatchId){batch=allBatches[i];break;}}
+    await db.collection('batches').doc(activeBatchId).update({
+      'status':'archived',
+      'archivedAt':firebase.firestore.FieldValue.serverTimestamp(),
+      'shipDate':new Date().toISOString().split('T')[0]
+    });
+    var batchName = batch?batch.name:'Batch';
+    // Clear active batch
+    activeBatchId='';
+    localStorage.removeItem('activeBatchId');
+    updateBatchIndicator();
+    // Reload batches
+    await loadBatchesInit();
+    toast('All SOs shipped! Batch "'+batchName+'" archived.','ok');
+  }catch(e){ console.error('Auto-archive error:',e); }
+}
+
 // ═══════ BATCH FILTER HELPER ═══════
 function getBatchShipments(){
   if(!activeBatchId) return allShipments;
@@ -2509,7 +2737,8 @@ async function renderBatches(){
       var name = b.name || ('Batch — '+date);
       var isActive = b.id === activeBatchId;
       var statusColor = b.status==='closed'?'var(--ink3)':'var(--teal)';
-      var statusLabel = b.status==='closed'?'Closed':'Active';
+      var statusLabel = b.status==='archived'?'Archived':b.status==='closed'?'Closed':'Active';
+      var statusColor = b.status==='archived'?'var(--ink4)':b.status==='closed'?'var(--ink3)':'var(--teal)';
 
       return '<div class="card" style="padding:1.25rem;border-left:4px solid '+(isActive?'var(--pink)':'var(--border2)')+';cursor:pointer" data-bid="'+b.id+'" onclick="selectBatch(this.dataset.bid)">'+
         '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">'+
@@ -2522,7 +2751,7 @@ async function renderBatches(){
           '</div>'+
           '<div style="display:flex;align-items:center;gap:10px;flex-shrink:0">'+
             '<span id="batch-count-'+b.id+'" style="background:var(--surface2);padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600">Loading…</span>'+
-            '<span style="color:'+statusColor+';font-size:13px;font-weight:600">● '+statusLabel+'</span>'+
+            (b.status==='archived'?'<span style="background:#f0fdf4;color:#16a34a;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700;border:1px solid #86efac">✅ Archived '+(b.shipDate||'')+'</span>':'<span style="color:'+statusColor+';font-size:13px;font-weight:600">● '+statusLabel+'</span>')+
             '<button class="btn btn-pink btn-sm" data-bid="'+b.id+'" onclick="event.stopPropagation();activateBatch(this.dataset.bid)">'+
               (isActive?'✅ Active':'Set Active')+
             '</button>'+
@@ -2842,7 +3071,13 @@ function renderShipping(){
     var carrier=s.carrier||'';
     var carrierDisplay=carrier?({'UPS':'UPS','FedEx':'FedEx','USPS':'USPS','Pickup':'Pickup'}[carrier]||carrier):'—';
     var shipSt=ss==='shipped'?'<span style="color:var(--pink);font-weight:700">Shipped</span>':ss==='pickup'?'<span style="color:#5b5bd6;font-weight:700">Picked Up</span>':ps==='done'?'<span style="color:var(--teal);font-weight:700">Ready</span>':'<span style="color:var(--ink3)">Not Ready</span>';
-    rows+='<tr>'+
+    var isShipped = s.shippingStatus==='shipped'||s.shippingStatus==='pickup';
+    rows+='<tr id="ship-row-'+s.id+'">'+
+      '<td style="text-align:center;padding:8px">'+
+        (isShipped?'<span style="color:var(--teal);font-size:18px">✅</span>':
+        '<input type="checkbox" class="ship-select" data-sid="'+s.id+'" onchange="updateBulkBar()"'+
+        ' style="width:18px;height:18px;cursor:pointer;accent-color:var(--pink)">')+
+      '</td>'+
       '<td class="mono" style="font-weight:800;color:var(--pink)">'+(s.ref||'')+'</td>'+
       '<td style="font-weight:600">'+(s.customer||'—')+'</td>'+
       '<td style="text-align:center">'+(s.shirts||0)+'</td>'+
@@ -2908,6 +3143,7 @@ async function saveShipping(){
     await logAct('Shipped SO via '+selectedCarrier);
     toast(selectedCarrier==='Pickup'?'Marked as picked up!':'Shipped via '+selectedCarrier,'ok');
     closeModal('ship-out');
+    await checkAutoArchiveBatch();
     renderShipping();
   }catch(e){toast('Error: '+e.message,'err');}
 }

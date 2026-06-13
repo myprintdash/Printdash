@@ -3196,14 +3196,53 @@ function openShipOut(shipId){
   sv('so-bol',ship.bolNumber||'');
   sv('so-notes',ship.shipNotes||'');
   sv('so-boxes',ship.boxes||1);
-  sv('so-date',new Date().toISOString().split('T')[0]);
-  document.getElementById('so-ship-info').innerHTML='<span style="color:var(--pink);font-weight:800">'+ship.ref+'</span> &middot; '+(ship.customer||'')+' &middot; '+(ship.shirts||0)+' shirts';
+  sv('so-date',ship.shipDate||new Date().toISOString().split('T')[0]);
+  document.getElementById('so-ship-info').innerHTML=
+    '<span style="color:var(--pink);font-weight:800">'+ship.ref+'</span> &middot; '+
+    (ship.customer||'')+' &middot; '+(ship.shirts||0)+' shirts'+
+    (ship.shippingStatus?'<span style="margin-left:10px;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:700;background:'+(ship.shippingStatus==='shipped'?'#fce4f3':'#ede9fe')+';color:'+(ship.shippingStatus==='shipped'?'var(--pink)':'#5b5bd6')+'">'+(ship.shippingStatus==='shipped'?'🚚 Shipped':'🤝 Picked Up')+'</span>':'');
   selectedCarrier=ship.carrier||'';
   var ids={'UPS':'carrier-ups-lbl','FedEx':'carrier-fedex-lbl','USPS':'carrier-usps-lbl','Pickup':'carrier-pickup-lbl'};
   for(var c in ids){var lbl=document.getElementById(ids[c]);if(lbl){lbl.style.borderColor='var(--border2)';lbl.style.background='';lbl.style.color='';}}
   if(ship.carrier) selectCarrier(ship.carrier);
+  // Show reset button only if already shipped/pickup
+  var resetBtn=document.getElementById('btn-reset-ship');
+  if(resetBtn) resetBtn.style.display=(ship.shippingStatus==='shipped'||ship.shippingStatus==='pickup')?'inline-block':'none';
   var m=document.getElementById('modal-ship-out');
   if(m){m.style.display='flex';m.classList.add('open');}
+}
+
+async function resetShipping(){
+  var shipId=v('so-shipid');
+  var ship=null;
+  for(var i=0;i<allShipments.length;i++){if(allShipments[i].id===shipId){ship=allShipments[i];break;}}
+  var ref=ship?ship.ref:shipId;
+  if(!confirm('Reset "'+ref+'" back to Not Shipped? This will clear carrier, tracking and BOL info.')) return;
+  try{
+    await db.collection('shipments').doc(shipId).update({
+      'shippingStatus':'',
+      'carrier':'',
+      'trackingNumber':'',
+      'bolNumber':'',
+      'shipDate':'',
+      'shipNotes':'',
+      'shippedAt':null
+    });
+    for(var i=0;i<allShipments.length;i++){
+      if(allShipments[i].id===shipId){
+        allShipments[i].shippingStatus='';
+        allShipments[i].carrier='';
+        allShipments[i].trackingNumber='';
+        allShipments[i].bolNumber='';
+        allShipments[i].shipDate='';
+        break;
+      }
+    }
+    await logAct('Reset shipping for '+ref+' back to Not Shipped');
+    toast(ref+' reset to Not Shipped!','ok');
+    closeModal('ship-out');
+    renderShipping();
+  }catch(e){toast('Error: '+e.message,'err');}
 }
 
 async function saveShipping(){

@@ -5164,39 +5164,50 @@ async function openDefectModal(shipId){
   document.getElementById('def-ship-info').innerHTML =
     '<strong>'+ship.customer+'</strong> &middot; <span style="color:var(--pink);font-weight:700">'+ship.ref+'</span> &middot; '+ship.shirts+' shirts &middot; '+(ship.date||'');
 
+  // Load shirts catalog if empty
+  if(!allShirts || allShirts.length===0){
+    try{
+      var shirtSnap = await db.collection('shirts').get();
+      allShirts = shirtSnap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+    }catch(e){ allShirts=[]; }
+  }
+
   // Clear rows
   var inBody=document.getElementById('def-in-rows');
   var prBody=document.getElementById('def-print-rows');
   if(inBody) inBody.innerHTML='';
   if(prBody) prBody.innerHTML='';
 
-  // Load existing defects
+  // Load existing defects from Firebase
   try{
     var snap = await db.collection('defects').where('shipmentId','==',shipId).get();
-    var existing = snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
     var insp=null, prnt=null;
-    for(var j=0;j<existing.length;j++){
-      if(existing[j].type==='inspection') insp=existing[j];
-      else if(existing[j].type==='print') prnt=existing[j];
-    }
+    snap.docs.forEach(function(d){
+      var rec=Object.assign({id:d.id},d.data());
+      if(rec.type==='inspection') insp=rec;
+      else if(rec.type==='print') prnt=rec;
+    });
 
     if(insp && insp.items && insp.items.length>0){
-      insp.items.forEach(function(r){
-        addDefectRow('def-in-rows', r.color, r.size, r.qty, r.spare, r.reason, r.extra||0);
-      });
+      for(var a=0;a<insp.items.length;a++){
+        var r=insp.items[a];
+        addDefectRow('def-in-rows', r.color||'', r.size||'', r.qty||0, r.spare||0, r.reason||'', r.extra||0);
+      }
     } else {
       addDefectRow('def-in-rows','','',0,0,'',0);
     }
 
     if(prnt && prnt.items && prnt.items.length>0){
-      prnt.items.forEach(function(r){
-        addDefectRow('def-print-rows', r.color, r.size, r.qty, r.spare, r.reason, r.extra||0);
-      });
+      for(var b=0;b<prnt.items.length;b++){
+        var p=prnt.items[b];
+        addDefectRow('def-print-rows', p.color||'', p.size||'', p.qty||0, p.spare||0, p.reason||'', p.extra||0);
+      }
     } else {
       addDefectRow('def-print-rows','','',0,0,'',0);
     }
 
   }catch(e){
+    toast('Error loading defects: '+e.message,'err');
     addDefectRow('def-in-rows','','',0,0,'',0);
     addDefectRow('def-print-rows','','',0,0,'',0);
   }

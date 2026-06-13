@@ -5142,19 +5142,17 @@ function addDefectRow(tbodyId, color, size, qty, spare, reason, extra){
 }
 
 
-function updateDefectTotals(tbodyId){
-  const rows = document.querySelectorAll('#'+tbodyId+' tr');
-  let totalQty=0, totalSpare=0;
-  rows.forEach(row=>{
-    const inputs = row.querySelectorAll('input[type=number]');
-    if(inputs[0]) totalQty += parseInt(inputs[0].value)||0;
-    if(inputs[1]) totalSpare += parseInt(inputs[1].value)||0;
-  });
-  const prefix = tbodyId.includes('in') ? 'def-in' : 'def-print';
-  const te = document.getElementById(prefix+'-total');
-  const se = document.getElementById(prefix+'-spare-total');
-  if(te) te.textContent = totalQty;
-  if(se) se.textContent = totalSpare;
+function updateDefectTotals(){
+  var inRows=getDefectRows('def-in-rows');
+  var printRows=getDefectRows('def-print-rows');
+  var inQty=0, inSpare=0, inExtra=0;
+  for(var i=0;i<inRows.length;i++){inQty+=inRows[i].qty||0; inSpare+=inRows[i].spare||0; inExtra+=inRows[i].extra||0;}
+  var printQty=0, printSpare=0, printExtra=0;
+  for(var j=0;j<printRows.length;j++){printQty+=printRows[j].qty||0; printSpare+=printRows[j].spare||0; printExtra+=printRows[j].extra||0;}
+  var inTot=document.getElementById('def-in-total');
+  var printTot=document.getElementById('def-print-total');
+  if(inTot) inTot.innerHTML='Defects: <strong style="color:var(--red)">'+inQty+'</strong> | Spares: <strong style="color:var(--yellow)">'+inSpare+'</strong>'+(inExtra>0?' | <strong style="color:var(--teal)">+'+inExtra+' extra</strong>':'');
+  if(printTot) printTot.innerHTML='Defects: <strong style="color:var(--red)">'+printQty+'</strong> | Spares: <strong style="color:var(--yellow)">'+printSpare+'</strong>'+(printExtra>0?' | <strong style="color:var(--teal)">+'+printExtra+' extra</strong>':'');
 }
 
 function getDefectRows(tbodyId){

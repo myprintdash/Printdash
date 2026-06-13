@@ -1922,9 +1922,10 @@ function badge(s){
 }
 
 // ═══════ BATCH FILTER HELPER ═══════
-function (activeBatchId?(allShipments.filter(function(s){return s.batchId===activeBatchId;}).length>0?allShipments.filter(function(s){return s.batchId===activeBatchId;}):allShipments):allShipments){
+function getBatchShipments(){
   if(!activeBatchId) return allShipments;
-  return allShipments.filter(function(s){ return s.batchId===activeBatchId; });
+  var r=allShipments.filter(function(s){return s.batchId===activeBatchId;});
+  return r.length>0?r:allShipments;
 }
 
 function getBatchLabel(){

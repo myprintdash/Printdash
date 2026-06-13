@@ -369,7 +369,7 @@ tbody tr:hover td{background:var(--surface2)}
       <div class="user-chip">
         <div class="user-av" id="top-av">?</div>
         <span id="batch-indicator" style="display:none;align-items:center;background:var(--pink2);color:var(--pink);padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700;margin-right:8px;cursor:pointer;white-space:nowrap" onclick="nav('batches')"></span><button onclick="openQRScanner()" class="btn btn-sm no-print" style="background:var(--teal);color:#fff;border-color:var(--teal);margin-right:4px">📷 Scan QR</button>
-      <button onclick="openQuickDefect()" class="btn btn-sm no-print" style="background:var(--yellow-bg);color:var(--yellow);border-color:var(--yellow);margin-right:8px">⚠ Defect</button>
+      <button onclick="openSmartDefect()" class="btn btn-sm no-print" style="background:var(--yellow-bg);color:var(--yellow);border-color:var(--yellow);margin-right:8px">⚠ Defect</button>
       <div class="user-meta"><div class="uname" id="top-name">—</div><div class="urole" id="top-role">—</div></div>
       </div>
       <button class="btn-logout" onclick="doLogout()">Sign out</button>
@@ -4356,23 +4356,40 @@ function openPrintStatusFromDetail(){
   if(currentSODetailId) openPrintStatus(currentSODetailId);
 }
 function openDefectFromDetail(){
+  var sid = currentSODetailId;
   closeModal('so-detail');
-  if(currentSODetailId) openDefectModal(currentSODetailId);
+  if(sid) setTimeout(function(){ openDefectModal(sid); }, 200);
 }
 function openQRFromDetail(){
   closeModal('so-detail');
   if(currentSODetailId) openQR(currentSODetailId);
 }
 function openDefectFromPrintStatus(){
-  // Get current shipId from print status modal
-  const shipId = v('ps-shipid');
+  var shipId = v('ps-shipid');
   if(!shipId) return;
   closeModal('print-status');
-  setTimeout(()=>openDefectModal(shipId), 200);
+  setTimeout(function(){ openDefectModal(shipId); }, 200);
 }
 
 
 
+
+
+function openSmartDefect(){
+  // If print status modal is open, use that SO
+  var psModal = document.getElementById('modal-print-status');
+  if(psModal && psModal.classList.contains('open')){
+    var shipId = v('ps-shipid');
+    if(shipId){ openDefectFromPrintStatus(); return; }
+  }
+  // If SO detail is open, use that SO
+  if(currentSODetailId){
+    openDefectModal(currentSODetailId);
+    return;
+  }
+  // Otherwise show picker filtered to current batch
+  openQuickDefect();
+}
 
 // ═══════ QUICK DEFECT (MOBILE) ═══════
 function openQuickDefect(){

@@ -5083,16 +5083,19 @@ function addDefectRow(tbodyId, color, size, qty, spare, reason, extra){
   color=color||''; size=size||''; qty=qty||0; spare=spare||0; reason=reason||''; extra=extra||0;
   var tbody=document.getElementById(tbodyId);
   if(!tbody) return;
-  var isIn=tbodyId.indexOf('in')>=0;
+  var isIn=(tbodyId==='def-in-rows');
   var bc=isIn?'#f0d060':'#f5c0c0';
   var tdStyle='padding:4px;border:1px solid '+bc;
 
   // Build color options
   var colorOpts='<option value="">— Color —</option>';
+  var colorFound=false;
   for(var i=0;i<allShirts.length;i++){
-    colorOpts+='<option value="'+allShirts[i].color+'"'+(allShirts[i].color===color?' selected':'')+'>'+allShirts[i].color+'</option>';
+    var selected=allShirts[i].color===color?' selected':'';
+    if(selected) colorFound=true;
+    colorOpts+='<option value="'+allShirts[i].color+'"'+selected+'>'+allShirts[i].color+'</option>';
   }
-  colorOpts+='<option value="__other__"'+(color&&!allShirts.find(function(s){return s.color===color;})?' selected':'')+'>Other…</option>';
+  colorOpts+='<option value="__other__"'+(color&&!colorFound?' selected':'')+'>Other…</option>';
 
   // Build size options
   var sizes=['XS','S','M','L','XL','2XL','3XL'];
@@ -5156,8 +5159,7 @@ function getDefectRows(tbodyId){
 async function openDefectModal(shipId){
   var ship = null;
   for(var i=0;i<allShipments.length;i++){if(allShipments[i].id===shipId){ship=allShipments[i];break;}}
-  if(!ship){ toast('SO not found: '+shipId,'err'); return; }
-  toast('Opening defects for '+ship.ref,'ok');
+  if(!ship) return;
   sv('def-shipid', shipId);
   document.getElementById('def-ship-info').innerHTML =
     '<strong>'+ship.customer+'</strong> &middot; <span style="color:var(--pink);font-weight:700">'+ship.ref+'</span> &middot; '+ship.shirts+' shirts &middot; '+(ship.date||'');

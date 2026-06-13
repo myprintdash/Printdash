@@ -2026,12 +2026,30 @@ async function loadDashboard(){
     var isTwo=sides.indexOf('2')>=0||design.toLowerCase().indexOf('2-side')>=0;
     if(isTwo){twoSideCount++;twoSideShirts+=shirts;}
     else{oneSideCount++;oneSideShirts+=shirts;}
-    var locationStr=design.replace(/[12]-Side Print\s*[-]\s*/i,'').trim();
+    // Strip "1-Side Print — " or "2-Side Print — " prefix (handles em dash and hyphen)
+    var locationStr=design
+      .replace(/[12][-–—]Side Print\s*[–—\-]\s*/i,'')
+      .replace(/[12]-Side\s*[–—\-]\s*/i,'')
+      .trim();
     if(locationStr){
-      var locs=locationStr.split(' and ');
+      // Split by " and " or " & " or ","
+      var locs=locationStr.split(/\s+and\s+|\s*&\s*|\s*,\s*/i);
       for(var l=0;l<locs.length;l++){
+        // Normalize: trim, title case
         var loc=locs[l].trim();
         if(!loc) continue;
+        // Title case normalize
+        loc=loc.replace(/\w\S*/g,function(w){return w.charAt(0).toUpperCase()+w.substr(1).toLowerCase();});
+        // Merge common variations
+        loc=loc.replace(/Full\s+Chest/i,'Full Chest')
+               .replace(/Left\s+Chest/i,'Left Chest')
+               .replace(/Right\s+Chest/i,'Right Chest')
+               .replace(/Full\s+Back/i,'Full Back')
+               .replace(/Left\s+Sleeve/i,'Left Sleeve')
+               .replace(/Right\s+Sleeve/i,'Right Sleeve')
+               .replace(/Back\s+Neck/i,'Back Neck')
+               .replace(/Front\s+Neck/i,'Front Neck')
+               .replace(/Hood/i,'Hood');
         if(!locationCounts[loc]) locationCounts[loc]=0;
         locationCounts[loc]+=shirts;
       }

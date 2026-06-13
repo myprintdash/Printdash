@@ -408,8 +408,20 @@ tbody tr:hover td{background:var(--surface2)}
           <button class="btn btn-sm" onclick="printAllLabels()" style="background:#f0f0ff;color:#5b5bd6;border-color:#c4c4f8">📱 Print All QR Labels</button>
         </div>
       </div>
-      <div class="metrics" id="dash-metrics"></div>
-      <div id="dash-alerts"></div>
+      <div id="dash-batch-bar" style="margin-bottom:.5rem"></div>
+      <div class="metrics" id="dash-metrics" style="margin-bottom:1.5rem"></div>
+
+      <!-- Impression Summary + Print Locations -->
+      <div class="card" style="margin-bottom:1.5rem;border:1.5px solid var(--pink)">
+        <div class="card-header"><div class="card-title" style="color:var(--pink)">📊 Impression Summary &amp; Print Locations</div></div>
+        <div id="dash-impressions"><div style="text-align:center;padding:2rem;color:var(--ink3)">Loading…</div></div>
+      </div>
+
+      <!-- Recent -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+        <div class="card"><div class="card-header"><div class="card-title">Recent Shipments</div></div><div id="dash-recent"></div></div>
+        <div class="card"><div class="card-header"><div class="card-title">Recent Production</div></div><div id="dash-prod"></div></div>
+      </div>
 
   <!-- IMPRESSIONS BOX -->
   <div style="background:var(--surface);border:2px solid var(--pink);border-radius:var(--radius-lg);padding:1.25rem 1.5rem;margin-bottom:1.5rem">
@@ -1910,7 +1922,7 @@ function badge(s){
 }
 
 // ═══════ BATCH FILTER HELPER ═══════
-function getBatchShipments(){
+function (activeBatchId?(allShipments.filter(function(s){return s.batchId===activeBatchId;}).length>0?allShipments.filter(function(s){return s.batchId===activeBatchId;}):allShipments):allShipments){
   if(!activeBatchId) return allShipments;
   return allShipments.filter(function(s){ return s.batchId===activeBatchId; });
 }
@@ -2260,7 +2272,7 @@ async function deleteShipment(id){
 // ═══════ ORDERS ═══════
 async function loadOrders(){
   await fetchAll();
-  var batchShips = getBatchShipments();
+  var batchShips = (activeBatchId?(allShipments.filter(function(s){return s.batchId===activeBatchId;}).length>0?allShipments.filter(function(s){return s.batchId===activeBatchId;}):allShipments):allShipments);
   var batchBar = document.getElementById('prod-batch-bar');
   if(batchBar) batchBar.innerHTML = makeBatchBar('orders');
   // Render production metrics
@@ -2288,7 +2300,7 @@ function renderOrders(){
   var f=(document.getElementById('ord-f')||{value:''}).value;
   var tbody=document.getElementById('ord-tbody');if(!tbody)return;
 
-  var batchShipsList = getBatchShipments();
+  var batchShipsList = (activeBatchId?(allShipments.filter(function(s){return s.batchId===activeBatchId;}).length>0?allShipments.filter(function(s){return s.batchId===activeBatchId;}):allShipments):allShipments);
   var list = batchShipsList.filter(function(s){
     var status = s.printStatus||'received';
     var matchQ = !q || (s.ref||'').toLowerCase().includes(q) || (s.customer||'').toLowerCase().includes(q);
@@ -2448,7 +2460,7 @@ async function loadReports(){
 function renderReports(){
   var rptBar = document.getElementById('rpt-batch-bar');
   if(rptBar) rptBar.innerHTML = makeBatchBar('reports');
-  var batchShips4 = getBatchShipments();
+  var batchShips4 = (activeBatchId?(allShipments.filter(function(s){return s.batchId===activeBatchId;}).length>0?allShipments.filter(function(s){return s.batchId===activeBatchId;}):allShipments):allShipments);
   var filter=document.getElementById('rpt-cust').value;
   var targets=filter?batchShips4.filter(function(s){return s.customer===filter;}):batchShips4;
   var grouped={};
@@ -3096,7 +3108,7 @@ async function loadShipping(){
   try{ await fetchAll(); }catch(e){ toast('Load error: '+e.message,'err'); return; }
   var batchBar2 = document.getElementById('ship-batch-bar');
   if(batchBar2) batchBar2.innerHTML = makeBatchBar('shipping');
-  var batchShips2 = getBatchShipments();
+  var batchShips2 = (activeBatchId?(allShipments.filter(function(s){return s.batchId===activeBatchId;}).length>0?allShipments.filter(function(s){return s.batchId===activeBatchId;}):allShipments):allShipments);
   var shipped=0, pickup=0, ready=0, pending=0;
   for(var i=0;i<batchShips2.length;i++){
     var s=batchShips2[i];
@@ -3123,7 +3135,7 @@ function renderShipping(){
   if(!tbody){ toast('tbody missing','err'); return; }
   toast('Rendering '+allShipments.length+' shipments','ok');
 
-  var batchShips3=getBatchShipments();
+  var batchShips3=(activeBatchId?(allShipments.filter(function(s){return s.batchId===activeBatchId;}).length>0?allShipments.filter(function(s){return s.batchId===activeBatchId;}):allShipments):allShipments);
   var list=[];
   for(var i=0;i<batchShips3.length;i++){
     var s=batchShips3[i];

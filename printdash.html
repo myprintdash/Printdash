@@ -739,16 +739,12 @@ tbody tr:hover td{background:var(--surface2)}
         </div>
         <div style="overflow-x:auto">
           <table style="width:100%;border-collapse:collapse;font-size:14px">
-            <thead><tr style="background:rgba(0,0,0,.04)">
-              <th style="padding:7px 8px;text-align:left;border:1px solid #f0d060;min-width:120px">Color</th>
-              <th style="padding:7px 6px;text-align:center;border:1px solid #f0d060;width:48px">Size</th>
-              <th style="padding:7px 6px;text-align:center;border:1px solid #f0d060;width:60px">Defect Qty</th>
-              <th style="padding:7px 6px;text-align:center;border:1px solid #f0d060;width:60px" title="Extra shirts customer sent (not printing)">Extra Shirts</th>
+            <thead style="display:none"><tr>
               <th style="padding:7px 6px;text-align:center;border:1px solid #f0d060;width:60px">Spare Used</th>
               <th style="padding:7px 8px;text-align:left;border:1px solid #f0d060">Reason</th>
               <th style="padding:7px 6px;border:1px solid #f0d060;width:36px"></th>
             </tr></thead>
-            <tbody id="def-in-rows"></tbody>
+            <tbody id="def-in-rows" style="min-width:600px"></tbody>
           </table>
         </div>
         <div style="text-align:right;margin-top:6px;font-size:14px">
@@ -765,16 +761,12 @@ tbody tr:hover td{background:var(--surface2)}
         </div>
         <div style="overflow-x:auto">
           <table style="width:100%;border-collapse:collapse;font-size:14px">
-            <thead><tr style="background:rgba(0,0,0,.04)">
-              <th style="padding:7px 8px;text-align:left;border:1px solid #f5c0c0;min-width:120px">Color</th>
-              <th style="padding:7px 6px;text-align:center;border:1px solid #f5c0c0;width:48px">Size</th>
-              <th style="padding:7px 6px;text-align:center;border:1px solid #f5c0c0;width:60px">Defect Qty</th>
-              <th style="padding:7px 6px;text-align:center;border:1px solid #f5c0c0;width:60px" title="Extra shirts customer sent (not printing)">Extra Shirts</th>
+            <thead style="display:none"><tr>
               <th style="padding:7px 6px;text-align:center;border:1px solid #f5c0c0;width:60px">Spare Used</th>
               <th style="padding:7px 8px;text-align:left;border:1px solid #f5c0c0">Reason</th>
               <th style="padding:7px 6px;border:1px solid #f5c0c0;width:36px"></th>
             </tr></thead>
-            <tbody id="def-print-rows"></tbody>
+            <tbody id="def-print-rows" style="min-width:600px"></tbody>
           </table>
         </div>
         <div style="text-align:right;margin-top:6px;font-size:14px">
@@ -5094,65 +5086,127 @@ async function savePrintStatus(){
 // ═══════ DEFECTS ═══════
 const SIZES = ['XS','S','M','L','XL','2XL','3XL'];
 
-function removeDefectRow(btn){var row=btn.parentNode;while(row&&row.tagName!=="TR")row=row.parentNode;if(row)row.parentNode.removeChild(row);updateDefectTotals();}
+function removeDefectRow(btn){
+  var row=btn.parentNode;
+  while(row&&row.tagName!=="TR") row=row.parentNode;
+  if(row) row.parentNode.removeChild(row);
+  updateDefectTotals();
+}
 
+// Add a color block - one row per color with all sizes inline
 function addDefectRow(tbodyId, color, size, qty, spare, reason, extra){
-  color=color||''; size=size||''; qty=qty||0; spare=spare||0; reason=reason||''; extra=extra||0;
+  addColorBlock(tbodyId, color, [{size:size||'XS',qty:qty||0,spare:spare||0,extra:extra||0,reason:reason||'Hole'}]);
+}
+
+function addColorBlock(tbodyId, color, sizeData){
+  color=color||'';
   var tbody=document.getElementById(tbodyId);
   if(!tbody) return;
   var isIn=(tbodyId==='def-in-rows');
   var bc=isIn?'#f0d060':'#f5c0c0';
-  var tdStyle='padding:4px;border:1px solid '+bc;
+  var bg=isIn?'#fffdf0':'#fff8f8';
 
-  // Build color options
+  // Color options
   var colorOpts='<option value="">— Color —</option>';
-  var colorFound=false;
   for(var i=0;i<allShirts.length;i++){
-    var selected=allShirts[i].color===color?' selected':'';
-    if(selected) colorFound=true;
-    colorOpts+='<option value="'+allShirts[i].color+'"'+selected+'>'+allShirts[i].color+'</option>';
+    colorOpts+='<option value="'+allShirts[i].color+'"'+(allShirts[i].color===color?' selected':'')+'>'+allShirts[i].color+'</option>';
   }
-  colorOpts+='<option value="__other__"'+(color&&!colorFound?' selected':'')+'>Other…</option>';
+  colorOpts+='<option value="Other"'+(color==='Other'?' selected':'')+'>Other…</option>';
 
-  // Build size options
-  var sizes=['XS','S','M','L','XL','2XL','3XL'];
-  var sizeOpts='<option value="">—</option>';
-  for(var j=0;j<sizes.length;j++){
-    sizeOpts+='<option value="'+sizes[j]+'"'+(sizes[j]===size?' selected':'')+'>'+sizes[j]+'</option>';
-  }
-
-  // Build reason options
+  // Reason options
   var reasons=['Hole','Stain','Short','Misprint','Ink smear','Ink bleed','Wrong color','Wrong size','Tear','Fading','Off-center print','Double print','Missing print','Fabric defect','Other'];
   var reasonOpts='';
   for(var k=0;k<reasons.length;k++){
-    reasonOpts+='<option value="'+reasons[k]+'"'+(reasons[k]===reason?' selected':'')+'>'+reasons[k]+'</option>';
+    var r=reasons[k];
+    var sel=(sizeData&&sizeData[0]&&sizeData[0].reason===r)?' selected':'';
+    reasonOpts+='<option value="'+r+'"'+sel+'>'+r+'</option>';
   }
 
-  var row=document.createElement('tr');
-  row.innerHTML=
-    '<td style="'+tdStyle+'"><select style="width:100%;border:none;font-size:13px;padding:3px;background:transparent">'+colorOpts+'</select></td>'+
-    '<td style="'+tdStyle+';text-align:center"><select style="border:none;font-size:13px;padding:3px;background:transparent">'+sizeOpts+'</select></td>'+
-    '<td style="'+tdStyle+';text-align:center"><input type="number" min="0" value="'+qty+'" style="width:55px;text-align:center;border:none;font-size:14px;font-weight:700;background:transparent" oninput="updateDefectTotals()"></td>'+
-    '<td style="'+tdStyle+';text-align:center"><input type="number" min="0" value="'+extra+'" style="width:55px;text-align:center;border:none;font-size:14px;background:transparent;color:var(--teal)" title="Extra shirts (not printing)" oninput="updateDefectTotals()"></td>'+
-    '<td style="'+tdStyle+';text-align:center"><input type="number" min="0" value="'+spare+'" style="width:55px;text-align:center;border:none;font-size:14px;background:transparent" oninput="updateDefectTotals()"></td>'+
-    '<td style="'+tdStyle+'"><select style="width:100%;border:none;font-size:13px;padding:3px;background:transparent">'+reasonOpts+'</select></td>'+
-    '<td style="'+tdStyle+';text-align:center"><button class="btn btn-sm btn-danger" style="padding:3px 8px" onclick="removeDefectRow(this)">✕</button></td>';
-  tbody.appendChild(row);
+  // Build size columns - all 7 sizes
+  var SIZES=['XS','S','M','L','XL','2XL','3XL'];
+  // Map existing sizeData
+  var sizeMap={};
+  if(sizeData){
+    for(var s=0;s<sizeData.length;s++){
+      if(sizeData[s].size) sizeMap[sizeData[s].size]=sizeData[s];
+    }
+  }
+
+  var sizeHeaders='<th style="padding:4px 6px;font-size:11px;text-align:center;border:1px solid '+bc+';background:rgba(0,0,0,.05)">SIZE</th>';
+  var defectRow='<td style="padding:4px;border:1px solid '+bc+';font-size:11px;font-weight:600;color:var(--red);text-align:center">DEFECT</td>';
+  var extraRow='<td style="padding:4px;border:1px solid '+bc+';font-size:11px;font-weight:600;color:var(--teal);text-align:center">EXTRA</td>';
+  var spareRow='<td style="padding:4px;border:1px solid '+bc+';font-size:11px;font-weight:600;color:var(--ink3);text-align:center">SPARE</td>';
+
+  for(var z=0;z<SIZES.length;z++){
+    var sz=SIZES[z];
+    var sd=sizeMap[sz]||{qty:0,extra:0,spare:0};
+    sizeHeaders+='<th style="padding:4px 2px;font-size:11px;text-align:center;border:1px solid '+bc+';background:rgba(0,0,0,.05);min-width:38px">'+sz+'</th>';
+    defectRow+='<td style="padding:2px;border:1px solid '+bc+';text-align:center"><input type="number" min="0" value="'+(sd.qty||0)+'" data-type="defect" data-size="'+sz+'" style="width:36px;text-align:center;border:none;font-size:13px;font-weight:700;background:transparent;color:var(--red)" oninput="updateDefectTotals()"></td>';
+    extraRow+='<td style="padding:2px;border:1px solid '+bc+';text-align:center"><input type="number" min="0" value="'+(sd.extra||0)+'" data-type="extra" data-size="'+sz+'" style="width:36px;text-align:center;border:none;font-size:13px;background:transparent;color:var(--teal)" oninput="updateDefectTotals()"></td>';
+    spareRow+='<td style="padding:2px;border:1px solid '+bc+';text-align:center"><input type="number" min="0" value="'+(sd.spare||0)+'" data-type="spare" data-size="'+sz+'" style="width:36px;text-align:center;border:none;font-size:13px;background:transparent" oninput="updateDefectTotals()"></td>';
+  }
+
+  // Build block as multiple rows grouped
+  var colorRow=document.createElement('tr');
+  colorRow.className='def-block-color';
+  colorRow.style.background=bg;
+  colorRow.innerHTML=
+    '<td colspan="'+(SIZES.length+1)+'" style="padding:6px 8px;border:1px solid '+bc+'">'+
+      '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'+
+        '<select class="def-color-sel" style="font-size:14px;font-weight:600;padding:4px 8px;border:1.5px solid '+bc+';border-radius:4px;min-width:140px" oninput="updateDefectTotals()">'+colorOpts+'</select>'+
+        '<span style="font-size:12px;color:var(--ink3)">Reason:</span>'+
+        '<select class="def-reason-sel" style="font-size:13px;padding:4px 8px;border:1.5px solid '+bc+';border-radius:4px" oninput="updateDefectTotals()">'+reasonOpts+'</select>'+
+        '<button class="btn btn-sm btn-danger" style="padding:3px 8px;margin-left:auto" onclick="removeDefectRow(this)">✕ Remove</button>'+
+      '</div>'+
+    '</td>';
+
+  var headerRow=document.createElement('tr');
+  headerRow.className='def-block-header';
+  headerRow.innerHTML='<th style="padding:4px 8px;font-size:11px;text-align:left;border:1px solid '+bc+';background:rgba(0,0,0,.05)">TYPE</th>'+sizeHeaders.replace('<th style="padding:4px 6px;font-size:11px;text-align:center;border:1px solid '+bc+';background:rgba(0,0,0,.05)">SIZE</th>','');
+
+  var defTR=document.createElement('tr');
+  defTR.className='def-block-row';
+  defTR.innerHTML=defectRow;
+
+  var extraTR=document.createElement('tr');
+  extraTR.className='def-block-row';
+  extraTR.innerHTML=extraRow;
+
+  var spareTR=document.createElement('tr');
+  spareTR.className='def-block-row';
+  spareTR.innerHTML=spareRow;
+
+  var spacerTR=document.createElement('tr');
+  spacerTR.innerHTML='<td colspan="'+(SIZES.length+1)+'" style="height:6px;background:transparent;border:none"></td>';
+
+  // Group all rows in a tbody-like structure
+  [colorRow,headerRow,defTR,extraTR,spareTR,spacerTR].forEach(function(r){tbody.appendChild(r);});
   updateDefectTotals();
 }
 
 
+function sumDefectBlock(tbodyId){
+  var tbody=document.getElementById(tbodyId);
+  if(!tbody) return {qty:0,spare:0,extra:0};
+  var qty=0,spare=0,extra=0;
+  var inputs=tbody.querySelectorAll('input[type=number]');
+  for(var i=0;i<inputs.length;i++){
+    var val=parseInt(inputs[i].value)||0;
+    var t=inputs[i].getAttribute('data-type');
+    if(t==='defect') qty+=val;
+    else if(t==='spare') spare+=val;
+    else if(t==='extra') extra+=val;
+  }
+  return {qty:qty,spare:spare,extra:extra};
+}
+
 function updateDefectTotals(){
-  var inRows=getDefectRows('def-in-rows');
-  var printRows=getDefectRows('def-print-rows');
-  var inQty=0, inSpare=0, inExtra=0;
-  for(var i=0;i<inRows.length;i++){inQty+=inRows[i].qty||0; inSpare+=inRows[i].spare||0; inExtra+=inRows[i].extra||0;}
-  var printQty=0, printSpare=0, printExtra=0;
-  for(var j=0;j<printRows.length;j++){printQty+=printRows[j].qty||0; printSpare+=printRows[j].spare||0; printExtra+=printRows[j].extra||0;}
+  var inSum=sumDefectBlock('def-in-rows');
+  var prSum=sumDefectBlock('def-print-rows');
   var inTot=document.getElementById('def-in-total');
   var printTot=document.getElementById('def-print-total');
-  if(inTot) inTot.innerHTML='Defects: <strong style="color:var(--red)">'+inQty+'</strong> | Spares: <strong style="color:var(--yellow)">'+inSpare+'</strong>'+(inExtra>0?' | <strong style="color:var(--teal)">+'+inExtra+' extra</strong>':'');
-  if(printTot) printTot.innerHTML='Defects: <strong style="color:var(--red)">'+printQty+'</strong> | Spares: <strong style="color:var(--yellow)">'+printSpare+'</strong>'+(printExtra>0?' | <strong style="color:var(--teal)">+'+printExtra+' extra</strong>':'');
+  if(inTot) inTot.innerHTML='Defects: <strong style="color:var(--red)">'+inSum.qty+'</strong> | Spares: <strong style="color:var(--yellow)">'+inSum.spare+'</strong>'+(inSum.extra>0?' | <strong style="color:var(--teal)">+'+inSum.extra+' extra</strong>':'');
+  if(printTot) printTot.innerHTML='Defects: <strong style="color:var(--red)">'+prSum.qty+'</strong> | Spares: <strong style="color:var(--yellow)">'+prSum.spare+'</strong>'+(prSum.extra>0?' | <strong style="color:var(--teal)">+'+prSum.extra+' extra</strong>':'');
 }
 
 function getDefectRows(tbodyId){
@@ -5203,22 +5257,33 @@ async function openDefectModal(shipId){
       else if(rec.type==='print') prnt=rec;
     });
 
+    // Group items by color for the new block layout
+    function groupByColor(items){
+      var groups={};var order=[];
+      for(var x=0;x<items.length;x++){
+        var c=items[x].color||'';
+        if(!groups[c]){groups[c]=[];order.push(c);}
+        groups[c].push(items[x]);
+      }
+      return {groups:groups,order:order};
+    }
+
     if(insp && insp.items && insp.items.length>0){
-      for(var a=0;a<insp.items.length;a++){
-        var r=insp.items[a];
-        addDefectRow('def-in-rows', r.color||'', r.size||'', r.qty||0, r.spare||0, r.reason||'', r.extra||0);
+      var inGrp=groupByColor(insp.items);
+      for(var a=0;a<inGrp.order.length;a++){
+        addColorBlock('def-in-rows', inGrp.order[a], inGrp.groups[inGrp.order[a]]);
       }
     } else {
-      addDefectRow('def-in-rows','','',0,0,'',0);
+      addColorBlock('def-in-rows','',null);
     }
 
     if(prnt && prnt.items && prnt.items.length>0){
-      for(var b=0;b<prnt.items.length;b++){
-        var p=prnt.items[b];
-        addDefectRow('def-print-rows', p.color||'', p.size||'', p.qty||0, p.spare||0, p.reason||'', p.extra||0);
+      var prGrp=groupByColor(prnt.items);
+      for(var b=0;b<prGrp.order.length;b++){
+        addColorBlock('def-print-rows', prGrp.order[b], prGrp.groups[prGrp.order[b]]);
       }
     } else {
-      addDefectRow('def-print-rows','','',0,0,'',0);
+      addColorBlock('def-print-rows','',null);
     }
 
   }catch(e){

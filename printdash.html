@@ -5424,13 +5424,22 @@ function closeModal(name){
   if(m){ m.classList.remove('open'); m.style.display='none'; setTimeout(()=>{m.style.display='';},50); }
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));});
-// Close overlay when clicking backdrop
-document.addEventListener('click', e=>{
+// Close overlay when clicking backdrop - only for simple modals
+document.addEventListener('click', function(e){
   if(e.target.classList.contains('overlay') && e.target.classList.contains('open')){
-    // Don't close defects modal on mobile - too easy to accidentally tap backdrop
-    const noAutoClose = ['modal-defects','modal-ship','modal-edit-ship','modal-print-status'];
-    if(!noAutoClose.includes(e.target.id)){
+    // Never auto-close these important modals
+    var noAutoClose = [
+      'modal-defects','modal-ship-out','modal-edit-ship','modal-print-status',
+      'modal-tag','modal-prod-note','modal-add-user','modal-new-batch',
+      'modal-bulk-ship','modal-quick-defect','modal-qr-scanner'
+    ];
+    var found=false;
+    for(var i=0;i<noAutoClose.length;i++){
+      if(noAutoClose[i]===e.target.id){found=true;break;}
+    }
+    if(!found){
       e.target.classList.remove('open');
+      e.target.style.display='none';
     }
   }
 });

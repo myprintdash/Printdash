@@ -4398,9 +4398,19 @@ function renderQuickDefectList(filter=''){
     return;
   }
 
-  container.innerHTML = filtered.map(s=>{
-    const defTotal = (s.defectIn||0)+(s.defectPrint||0);
-    return `<div onclick="selectQuickDefect('${s.id}')"
+  container.innerHTML = filtered.map(function(s){
+    var defTotal = (s.defectIn||0)+(s.defectPrint||0);
+    return '<div onclick="selectQuickDefect(\'' + s.id + '\')"'+
+      ' style="padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px"'+
+      ' onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">'+
+      '<div>'+
+        '<div style="font-size:16px;font-weight:700;color:var(--pink)">'+s.ref+'</div>'+
+        '<div style="font-size:13px;color:var(--ink3)">'+s.customer+' · '+s.shirts+' shirts · '+(s.date||'')+'</div>'+
+      '</div>'+
+      '<div style="text-align:right;flex-shrink:0">'+
+        (defTotal>0?'<span style="color:var(--red);font-weight:700;font-size:13px">⚠ '+defTotal+' defects</span>':'<span style="color:var(--teal);font-size:13px">✅ No defects</span>')+
+      '</div>'+
+    '</div>';
       style="padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px"
       onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
       <div>
@@ -5218,6 +5228,7 @@ async function saveDefects(){
         'qty': inQty,
         'spareUsed': inSpare,
         'items': inItems,
+      'extraShirts': inItems.reduce(function(a,r){return a+(r.extra||0);},0),
         'createdBy': currentUser.uid,
         'createdAt': firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -5229,6 +5240,7 @@ async function saveDefects(){
         'qty': printQty,
         'spareUsed': printSpare,
         'items': printItems,
+      'extraShirts': printItems.reduce(function(a,r){return a+(r.extra||0);},0),
         'createdBy': currentUser.uid,
         'createdAt': firebase.firestore.FieldValue.serverTimestamp()
       });

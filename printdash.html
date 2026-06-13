@@ -5154,40 +5154,55 @@ function getDefectRows(tbodyId){
 }
 
 async function openDefectModal(shipId){
-  const ship = allShipments.find(s=>s.id===shipId);
+  var ship = null;
+  for(var i=0;i<allShipments.length;i++){if(allShipments[i].id===shipId){ship=allShipments[i];break;}}
   if(!ship) return;
   sv('def-shipid', shipId);
   document.getElementById('def-ship-info').innerHTML =
-    `<strong>${ship.customer}</strong> · <span style="color:var(--pink);font-weight:700">${ship.ref}</span> · ${ship.shirts} shirts · ${ship.date||''}`;
+    '<strong>'+ship.customer+'</strong> &middot; <span style="color:var(--pink);font-weight:700">'+ship.ref+'</span> &middot; '+ship.shirts+' shirts &middot; '+(ship.date||'');
 
   // Clear rows
-  const inBody=document.getElementById('def-in-rows');
-  const prBody=document.getElementById('def-print-rows');
+  var inBody=document.getElementById('def-in-rows');
+  var prBody=document.getElementById('def-print-rows');
   if(inBody) inBody.innerHTML='';
   if(prBody) prBody.innerHTML='';
 
   // Load existing defects
   try{
-    const snap = await db.collection('defects').where('shipmentId','==',shipId).get();
-    const existing = snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
-    const insp = existing.find(d=>d.type==='inspection');
-    const prnt = existing.find(d=>d.type==='print');
+    var snap = await db.collection('defects').where('shipmentId','==',shipId).get();
+    var existing = snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+    var insp=null, prnt=null;
+    for(var j=0;j<existing.length;j++){
+      if(existing[j].type==='inspection') insp=existing[j];
+      else if(existing[j].type==='print') prnt=existing[j];
+    }
 
     if(insp && insp.items && insp.items.length>0){
-      insp.items.forEach(r=>addDefectRow('def-in-rows',r.color,r.size,r.qty,r.spare,r.reason));
-    } else { addDefectRow('def-in-rows'); }
+      insp.items.forEach(function(r){
+        addDefectRow('def-in-rows', r.color, r.size, r.qty, r.spare, r.reason, r.extra||0);
+      });
+    } else {
+      addDefectRow('def-in-rows','','',0,0,'',0);
+    }
 
     if(prnt && prnt.items && prnt.items.length>0){
-      prnt.items.forEach(r=>addDefectRow('def-print-rows',r.color,r.size,r.qty,r.spare,r.reason));
-    } else { addDefectRow('def-print-rows'); }
+      prnt.items.forEach(function(r){
+        addDefectRow('def-print-rows', r.color, r.size, r.qty, r.spare, r.reason, r.extra||0);
+      });
+    } else {
+      addDefectRow('def-print-rows','','',0,0,'',0);
+    }
 
   }catch(e){
-    addDefectRow('def-in-rows');
-    addDefectRow('def-print-rows');
+    addDefectRow('def-in-rows','','',0,0,'',0);
+    addDefectRow('def-print-rows','','',0,0,'',0);
   }
-  const m=document.getElementById('modal-defects');
+
+  updateDefectTotals();
+  var m=document.getElementById('modal-defects');
   if(m){m.style.display='flex';m.classList.add('open');}
 }
+
 
 async function saveDefects(){
   var shipId = v('def-shipid');

@@ -5077,6 +5077,8 @@ async function savePrintStatus(){
 // ═══════ DEFECTS ═══════
 const SIZES = ['XS','S','M','L','XL','2XL','3XL'];
 
+function removeDefectRow(btn){var row=btn.parentNode;while(row&&row.tagName!=="TR")row=row.parentNode;if(row)row.parentNode.removeChild(row);updateDefectTotals();}
+
 function addDefectRow(tbodyId, color, size, qty, spare, reason, extra){
   color=color||''; size=size||''; qty=qty||0; spare=spare||0; reason=reason||''; extra=extra||0;
   var tbody=document.getElementById(tbodyId);
@@ -5114,7 +5116,7 @@ function addDefectRow(tbodyId, color, size, qty, spare, reason, extra){
     '<td style="'+tdStyle+';text-align:center"><input type="number" min="0" value="'+extra+'" style="width:55px;text-align:center;border:none;font-size:14px;background:transparent;color:var(--teal)" title="Extra shirts (not printing)" oninput="updateDefectTotals()"></td>'+
     '<td style="'+tdStyle+';text-align:center"><input type="number" min="0" value="'+spare+'" style="width:55px;text-align:center;border:none;font-size:14px;background:transparent" oninput="updateDefectTotals()"></td>'+
     '<td style="'+tdStyle+'"><select style="width:100%;border:none;font-size:13px;padding:3px;background:transparent">'+reasonOpts+'</select></td>'+
-    '<td style="'+tdStyle+';text-align:center"><button class="btn btn-sm btn-danger" style="padding:3px 8px" onclick="this.closest('tr').remove();updateDefectTotals()">✕</button></td>';
+    '<td style="'+tdStyle+';text-align:center"><button class="btn btn-sm btn-danger" style="padding:3px 8px" onclick="removeDefectRow(this)">✕</button></td>';
   tbody.appendChild(row);
   updateDefectTotals();
 }

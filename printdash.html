@@ -5156,7 +5156,8 @@ function getDefectRows(tbodyId){
 async function openDefectModal(shipId){
   var ship = null;
   for(var i=0;i<allShipments.length;i++){if(allShipments[i].id===shipId){ship=allShipments[i];break;}}
-  if(!ship) return;
+  if(!ship){ toast('SO not found: '+shipId,'err'); return; }
+  toast('Opening defects for '+ship.ref,'ok');
   sv('def-shipid', shipId);
   document.getElementById('def-ship-info').innerHTML =
     '<strong>'+ship.customer+'</strong> &middot; <span style="color:var(--pink);font-weight:700">'+ship.ref+'</span> &middot; '+ship.shirts+' shirts &middot; '+(ship.date||'');
